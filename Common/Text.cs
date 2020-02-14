@@ -1,16 +1,16 @@
 ﻿using System;
 
-namespace Compiler
+namespace Compiler.Common
 {
     public class Text
     {
         private readonly string text;
-        private int end;
+        public int End { get; private set; }
 
         public Text(string text)
         {
             this.text = text;
-            this.end = text.Length - 1;
+            this.End = text.Length - 1;
         }
 
         public static Text Of(string text)
@@ -21,12 +21,17 @@ namespace Compiler
         public int Pos { get; private set; } = 0;
         public int Line { get; private set; } = 0;
         public int LinePos { get; private set; } = 0;
-        public bool IsExhausted => Pos > end;
+        public bool IsExhausted => Pos > End;
         public char Current => text[Pos];
+
+        public string Range(int start, int len)
+        {
+            return text.Substring(start, len);
+        }
 
         public char Peek()
         {
-            if (Pos < end)
+            if (Pos < End)
             {
                 return text[Pos + 1];
             }
@@ -72,23 +77,54 @@ namespace Compiler
             return p;
         }
 
+        public void SkipSpacesAndComments()
+        {
+            SkipSpaces();
+            bool done = false;
+            while (!done && !IsExhausted)
+            {
+                done = true;
+                // line comment, skip this line and continue loop
+                if (Current == '/' && Peek() == '/')
+                {
+                    SkipLine();
+                    done = false;
+                    continue;
+                }
+                // block comment, advance until end marker or EOF
+                if (Current == '/' && Peek() == '*')
+                {
+                    Advance(2);
+                    while (!IsExhausted && (Current != '*' || Peek() != '/'))
+                    { 
+                        done = false;
+                        Advance();
+                        if (IsExhausted)
+                        {
+                            done = true;
+                            break;
+                        }
+                    }
+                    Advance(2);
+                }
+                SkipSpaces();
+            }
+        }
+
         public void SkipSpaces()
         {
             char curr = Current;
 
             while ((curr == ' ' || curr == '\n') && !IsExhausted)
             {
-                if (curr == '\n') { 
-                    Line++; 
-                    LinePos = 0; 
-                }
                 curr = Next();
             }
         }
 
         public void SkipLine()
         {
-            while (Peek() != '\n' && !IsExhausted) { Advance(); }
+            while (Current != '\n' && !IsExhausted) { Advance(); }
+            Advance();
         }
     }
 }

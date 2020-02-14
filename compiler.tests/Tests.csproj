@@ -38,16 +38,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ScannerTest.cs" />
-    <Compile Include="EmptyClass.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\compiler\Compiler.csproj">
-      <Project>{C82FE1A9-D3B3-4FC1-B098-B393003B6861}</Project>
-      <Name>Compiler</Name>
-    </ProjectReference>
-  </ItemGroup>
+  <Import Project="..\Scan\Scan.projitems" Label="Shared" Condition="Exists('..\Scan\Scan.projitems')" />
+  <Import Project="..\Common\Common.projitems" Label="Shared" Condition="Exists('..\Common\Common.projitems')" />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

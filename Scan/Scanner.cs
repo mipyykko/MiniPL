@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Compiler.Common;
 
-namespace Compiler
+namespace Compiler.Scan
 {
     public class Scanner
     {
@@ -16,13 +17,15 @@ namespace Compiler
             this.text = text;
         }
 
+        // TODO/FIXME: does startPos & endPos +1 on TypicalTokens 
+        // may need to do other way - depends on where advance called - includes " from string etc.
         private SourceInfo GetSourceInfo => SourceInfo.Of((startPos, text.Pos), (text.Line, startLinePos, text.LinePos));
 
         public List<Token> Scan()
         {
             while (!text.IsExhausted)
             {
-                text.SkipSpaces();
+                text.SkipSpacesAndComments();
                 char curr = text.Current;
                 char next = text.Peek();
 
@@ -31,7 +34,7 @@ namespace Compiler
                     break;
                 }
 
-                TokenType tokenType = Token.GetTokenType(curr);
+                (TokenType tokenType, string token) = GetTrivialToken();
                 startPos = text.Pos;
                 startLinePos = text.LinePos;
 
@@ -45,39 +48,6 @@ namespace Compiler
                         string stringContents = GetStringContents();
                         AddToken(TokenType.StringValue, stringContents);
                         break;
-                    case TokenType.Division:
-                        if (next == '/') { 
-                            text.SkipLine();  // line comment
-                        } else if (next == '*') { 
-                            HandleBlockComment(); // block comment
-                        }
-                        else
-                        {
-                            goto default;
-                        }
-                        break;
-                    case TokenType.Dot:
-                        if (next == '.')
-                        {
-                            text.Advance();
-                            AddToken(TokenType.Range);
-                        }
-                        else
-                        {
-                            goto default;
-                        }
-                        break;
-                    case TokenType.Colon:
-                        if (next == '=')
-                        {
-                            text.Advance();
-                            AddToken(TokenType.Assignment);
-                        }
-                        else
-                        {
-                            goto default;
-                        }
-                        break;
                     case TokenType.Unknown:
                         if (char.IsLetter(curr))
                         {
@@ -87,20 +57,20 @@ namespace Compiler
                             if (kw != KeywordType.Unknown)
                             {
                                 AddToken(TokenType.Keyword, kw, atom);
+                                break;
                             }
-                            else
-                            {
-                                AddToken(TokenType.Identifier, atom);
-                            }
+                            AddToken(TokenType.Identifier, atom);
+                            break;
                         }
+                        AddToken(TokenType.Unknown, curr);
                         break;
                     default:
-                        AddToken(tokenType);
+                        AddToken(tokenType, token);
                         break;
                 }
                 text.Advance();
             }
-            AddToken(TokenType.EOF);
+            AddToken(TokenType.EOF); 
 
             foreach (Token tok in tokens)
             {
@@ -111,26 +81,46 @@ namespace Compiler
 
         private void AddToken(TokenType type, KeywordType kw, string contents)
         {
+            (int start, int end) = GetSourceInfo.sourceRange;
+            Console.WriteLine("token contents {0}, source {1}", contents, text.Range(start, (end - start)));
             tokens.Add(new Token(type, kw, contents, GetSourceInfo));
         }
         private void AddToken(TokenType type, string contents)
         {
             AddToken(type, KeywordType.Unknown, contents);
         }
+        private void AddToken(TokenType type, char content) 
+        {
+            AddToken(type, KeywordType.Unknown, "" + content);
+        }
         private void AddToken(TokenType type)
         {
             AddToken(type, "");
         }
 
+        private (TokenType, string) GetTrivialToken()
+        {
+            foreach (string token in Token.TrivialTokenTypes.Keys)
+            {
+                if (text.Pos + token.Length < text.End && text.Range(text.Pos, token.Length) == token)
+                {
+                    text.Advance(token.Length);
+                    return (Token.TrivialTokenTypes[token], token);
+                }
+            }
+            return (char.IsDigit(text.Current) ? TokenType.Number : TokenType.Unknown,
+                    $"{text.Current}");
+        }
+
         private string GetAtom()
         {
-            StringBuilder kw = new StringBuilder("" + text.Current);
+            StringBuilder kw = new StringBuilder($"{text.Current}");
             char curr;
 
             while (!text.IsExhausted)
             {
                 curr = text.Peek();
-                if (" \t\n".IndexOf(curr) < 0 && char.IsLetter(curr))
+                if (" \t\n".IndexOf(curr) < 0 && (char.IsLetter(curr) || char.IsDigit(curr) || curr == '_'))
                 {
                     kw.Append(curr);
                     text.Advance();
@@ -160,18 +150,65 @@ namespace Compiler
 
         private string GetStringContents()
         {
-            text.Advance(); // skip "
+            // text.Advance(); // skip "
             char curr = text.Current;
-            StringBuilder str = new StringBuilder($"{curr}");
+            StringBuilder str = new StringBuilder();
 
-            while (!text.IsExhausted && (curr = text.Peek()) != '"') 
+            string error = null;
+
+            while (!text.IsExhausted) 
             {
-                str.Append(curr);
-                text.Advance();
+                curr = text.Current;
+
+                if (curr == '"')
+                {
+                    // TODO: what to do with error?
+                    text.Advance();
+                    return str.ToString();
+                }
+                if (curr == '\\')
+                {
+                    text.Advance();
+                    char peeked = text.Current;
+                    switch (peeked)
+                    {
+                        case 'n':
+                            str.Append("\n");
+                            break;
+                        case 't':
+                            str.Append("\t");
+                            break;
+                        case '\\':
+                            str.Append("\\");
+                            Console.WriteLine("wehey! {0}", str);
+                            break;
+                        default:
+                            if (char.IsDigit(peeked))
+                            {
+                                int numberValue = Int16.Parse(GetNumberContents());
+                                str.Append(Convert.ToChar(numberValue));
+                                break;
+                            }
+                            error = String.Format("unknown special character \\{0} at {1}", peeked, text.Pos);
+                            break;
+                    }
+                    text.Advance();
+                }
+                else
+                {
+                    str.Append(curr);
+                    text.Advance();
+                }
             }
 
-            text.Advance();
-            return str.ToString();
+            throw new Exception("unterminated string terminal");
+            // if (error != null)
+            // {
+            //    // or add to error list
+            //    throw new Exception(String.Format("Error: {0} in {1}", error, str));
+            //}
+            //text.Advance();
+            //return str.ToString();
         }
 
 

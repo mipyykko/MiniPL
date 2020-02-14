@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Compiler
+namespace Compiler.Common
 {
     public enum TokenType
     {
@@ -17,6 +17,8 @@ namespace Compiler
         Range,
         Equals,
         LessThan,
+        Operator,
+        Unary,
         Addition,
         Subtraction,
         Multiplication,
@@ -77,38 +79,33 @@ namespace Compiler
             return $"{type} {sourceInfo.sourceRange} {sourceInfo.lineRange} {kw} \"{content}\"";
         }
 
-        private static Dictionary<char, TokenType> CharToTokenType = new Dictionary<char, TokenType>()
+        public static Dictionary<string, TokenType> TrivialTokenTypes = new Dictionary<string, TokenType>()
         {
-            [';'] = TokenType.Separator,
-            ['('] = TokenType.OpenParen,
-            [')'] = TokenType.CloseParen,
-            ['"'] = TokenType.Quote,
-            ['.'] = TokenType.Dot,
-            [':'] = TokenType.Colon,
-            ['='] = TokenType.Equals,
-            ['<'] = TokenType.LessThan,
-            ['+'] = TokenType.Addition,
-            ['-'] = TokenType.Subtraction,
-            ['*'] = TokenType.Multiplication,
-            ['/'] = TokenType.Division,
-            ['&'] = TokenType.And,
-            ['!'] = TokenType.Not,
-            ['0'] = TokenType.Number,
-            ['1'] = TokenType.Number,
-            ['2'] = TokenType.Number,
-            ['3'] = TokenType.Number,
-            ['4'] = TokenType.Number,
-            ['5'] = TokenType.Number,
-            ['6'] = TokenType.Number,
-            ['7'] = TokenType.Number,
-            ['8'] = TokenType.Number,
-            ['9'] = TokenType.Number
+            // could be simplified to have "operator" and so on
+            [":="] = TokenType.Assignment,
+            [".."] = TokenType.Range,
+            [";"] = TokenType.Separator,
+            ["("] = TokenType.OpenParen,
+            [")"] = TokenType.CloseParen,
+            ["\""] = TokenType.Quote,
+            ["."] = TokenType.Dot,
+            [":"] = TokenType.Colon,
+            ["="] = TokenType.Equals,
+            ["<"] = TokenType.LessThan,
+            ["+"] = TokenType.Operator, // Addition,
+            ["-"] = TokenType.Operator, // Subtraction,
+            ["*"] = TokenType.Operator, // Multiplication,
+            ["/"] = TokenType.Operator, // Division,
+            ["&"] = TokenType.And,
+            // unary? how extensible would we want to be
+            ["!"] = TokenType.Not
         };
 
         private static Dictionary<string, KeywordType> StringToKeywordType = new Dictionary<string, KeywordType>()
         {
             ["var"] = KeywordType.Var,
             ["for"] = KeywordType.For,
+            ["end"] = KeywordType.End,
             ["in"] = KeywordType.In,
             ["do"] = KeywordType.Do,
             ["read"] = KeywordType.Read,
@@ -118,14 +115,6 @@ namespace Compiler
             ["bool"] = KeywordType.Bool,
             ["assert"] = KeywordType.Assert
         };
-
-        public static TokenType GetTokenType(char c)
-        {
-            TokenType t = TokenType.Unknown;
-            CharToTokenType.TryGetValue(c, out t);
-
-            return t;
-        }
 
         public static KeywordType GetKeywordType(string s)
         {

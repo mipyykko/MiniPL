@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Compiler
+namespace Compiler.Common
 {
     public class SourceInfo
     {

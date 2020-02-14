@@ -1,8 +1,10 @@
 ﻿using FluentAssertions;
 using NUnit.Framework;
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using Compiler.Common;
+using Compiler.Scan;
+using Text = Compiler.Common.Text;
 
 namespace Compiler.Tests.ScannerTests
 {
@@ -36,11 +38,11 @@ namespace Compiler.Tests.ScannerTests
             string expected = 
 $@"Keyword (0, 2) (0, 0, 2) Var ""var""
 Identifier (4, 4) (0, 4, 4) Unknown ""a""
-Colon (6, 6) (0, 6, 6) Unknown """"
+Colon (6, 6) (0, 6, 6) Unknown "":""
 Keyword (8, 10) (0, 8, 10) Int ""int""
-Assignment (12, 13) (0, 12, 13) Unknown """"
+Assignment (12, 13) (0, 12, 13) Unknown "":=""
 IntValue (15, 15) (0, 15, 15) Unknown ""0""
-Separator (16, 16) (0, 16, 16) Unknown """"
+Separator (16, 16) (0, 16, 16) Unknown "";""
 EOF (16, 17) (0, 16, 17) Unknown """"";
 
             AssertProgramTokens(program1, expected);
@@ -53,10 +55,10 @@ EOF (16, 17) (0, 16, 17) Unknown """"";
             string expected =
 $@"Keyword (26, 30) (2, 0, 4) Print ""print""
 StringValue (32, 46) (2, 6, 20) Unknown ""not commented""
-Separator (47, 47) (2, 21, 21) Unknown """"
+Separator (47, 47) (2, 21, 21) Unknown "";""
 Keyword (78, 82) (6, 0, 4) Print ""print""
 StringValue (84, 108) (6, 6, 30) Unknown ""a/* not comment */ // b""
-Separator (109, 109) (6, 31, 31) Unknown """"
+Separator (109, 109) (6, 31, 31) Unknown "";""
 EOF (109, 110) (6, 31, 32) Unknown """"";
 
             AssertProgramTokens(program2, expected);
