@@ -12,5 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Token.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceInfo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Text.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ValueType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Node.cs" />
   </ItemGroup>
 </Project>

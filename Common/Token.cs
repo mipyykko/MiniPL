@@ -64,11 +64,6 @@ namespace Compiler.Common
             SourceInfo = sourceInfo;
         }
 
-        //public Token(TokenType type, string content, SourceInfo sourceInfo) : this(type, KeywordType.Unknown, content, sourceInfo) { }
-        //public Token(TokenType type, char c, SourceInfo sourceInfo) : this(type, KeywordType.Unknown, $"{c}", sourceInfo) { }
-        //public Token(TokenType type, KeywordType kw, SourceInfo sourceInfo) : this(type, kw, "", sourceInfo) { }
-        //public Token(TokenType type, SourceInfo sourceInfo) : this(type, KeywordType.Unknown, "", sourceInfo) { }
-
         public static Token Of(TokenType type, KeywordType kw, string content, SourceInfo sourceInfo)
         {
             return new Token(type, kw, content, sourceInfo);
@@ -98,13 +93,13 @@ namespace Compiler.Common
             ["\""] = TokenType.Quote,
             ["."] = TokenType.Dot,
             [":"] = TokenType.Colon,
-            ["="] = TokenType.Equals,
-            ["<"] = TokenType.LessThan,
+            ["="] = TokenType.Operator, // Equals
+            ["<"] = TokenType.Operator, // LessThan
             ["+"] = TokenType.Operator, // Addition,
             ["-"] = TokenType.Operator, // Subtraction,
             ["*"] = TokenType.Operator, // Multiplication,
             ["/"] = TokenType.Operator, // Division,
-            ["&"] = TokenType.And,
+            ["&"] = TokenType.Operator, // And,
             // unary? how extensible would we want to be
             ["!"] = TokenType.Not
         };
