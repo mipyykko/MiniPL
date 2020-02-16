@@ -121,10 +121,7 @@ namespace Compiler.Common
 
         public static KeywordType GetKeywordType(string s)
         {
-            KeywordType kwt = KeywordType.Unknown;
-            StringToKeywordType.TryGetValue(s, out kwt);
-
-            return kwt;
+            return StringToKeywordType.TryGetValueOrDefault(s, KeywordType.Unknown);
         }
     }
 }

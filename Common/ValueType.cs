@@ -1,5 +1,5 @@
 ﻿using System;
-namespace Common
+namespace Compiler.Common
 {
     public class ValueType<T>
     {

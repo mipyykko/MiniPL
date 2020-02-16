@@ -14,5 +14,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Text.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ValueType.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Node.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util.cs" />
   </ItemGroup>
 </Project>

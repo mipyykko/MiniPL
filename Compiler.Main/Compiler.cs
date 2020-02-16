@@ -9,7 +9,7 @@ namespace Compiler.Main
     {
         public Compiler(string source)
         {
-            Scanner scanner = new Scanner(new Text(source));
+            Scanner scanner = new Scanner(Text.Of(source));
             Parser parse = new Parser(scanner);
             parse.Program();
         }

@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Compiler.Common;
 
-namespace Common
+namespace Compiler.Common
 {
     public class Node
     {
@@ -54,6 +53,17 @@ namespace Common
             [TokenType.StringValue] = NodeType.StringValue,
             [TokenType.BoolValue] = NodeType.BoolValue,
             [TokenType.Identifier] = NodeType.Identifier
+        };
+
+        public static Dictionary<string, NodeType> OperatorToNodeType = new Dictionary<string, NodeType>()
+        {
+            ["*"] = NodeType.Multiplication,
+            ["/"] = NodeType.Division,
+            ["+"] = NodeType.Addition,
+            ["-"] = NodeType.Subtraction,
+            ["&"] = NodeType.And,
+            ["="] = NodeType.Equals,
+            ["<"] = NodeType.LessThan
         };
 
         public List<Node> Children { get; private set; }

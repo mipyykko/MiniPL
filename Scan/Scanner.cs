@@ -7,37 +7,37 @@ namespace Compiler.Scan
 {
     public class Scanner
     {
-        private Text text;
+        public Text Text { get; private set; }
         private List<Token> tokens = new List<Token>();
         private int startPos;
         private int startLinePos;
 
         public Scanner(Text text)
         {
-            this.text = text;
+            Text = text;
         }
 
         private SourceInfo GetSourceInfo(string token) {
             int tokenLength = Math.Max(0, token.Length - 1);
             return SourceInfo.Of(
                 (startPos, startPos + tokenLength), 
-                (text.Line, startLinePos, startLinePos + tokenLength)
+                (Text.Line, startLinePos, startLinePos + tokenLength)
             );
         }
 
         public Token GetNextToken()
         {
-            text.SkipSpacesAndComments();
-            char curr = text.Current;
-            char next = text.Peek;
+            Text.SkipSpacesAndComments();
+            char curr = Text.Current;
+            char next = Text.Peek;
 
-            if (text.IsExhausted)
+            if (Text.IsExhausted)
             {
                 return Token.Of(TokenType.EOF, GetSourceInfo(""));
             }
 
-            startPos = text.Pos;
-            startLinePos = text.LinePos;
+            startPos = Text.Pos;
+            startLinePos = Text.LinePos;
             (TokenType tokenType, string token) = GetTrivialToken();
 
             switch (tokenType)
@@ -80,21 +80,21 @@ namespace Compiler.Scan
 
         private (TokenType, string) GetTrivialToken()
         {
-            string curr = $"{text.Current}";
+            string curr = $"{Text.Current}";
 
-            if (Text.IsDigit(text.Current)) {
+            if (Text.IsDigit(Text.Current)) {
                 return (TokenType.Number, curr);
             }
-            if (char.IsLetter(text.Current)) // we don't have any trivial tokens starting with letters now
+            if (char.IsLetter(Text.Current)) // we don't have any trivial tokens starting with letters now
             {
                 return (TokenType.Unknown, curr);
             }
 
             foreach (string token in Token.TrivialTokenTypes.Keys)
             {
-                if (text.Pos + token.Length <= text.End && text.Range(text.Pos, token.Length).Equals(token))
+                if (Text.Pos + token.Length <= Text.End && Text.Range(Text.Pos, token.Length).Equals(token))
                 {
-                    text.Advance(token.Length);
+                    Text.Advance(token.Length);
                     return (Token.TrivialTokenTypes[token], token);
                 }
             }
@@ -106,13 +106,13 @@ namespace Compiler.Scan
             StringBuilder kw = new StringBuilder("");
             char curr;
 
-            while (!text.IsExhausted)
+            while (!Text.IsExhausted)
             {
-                curr = text.Current;
+                curr = Text.Current;
                 if (" \t\n".IndexOf(curr) < 0 && (char.IsLetter(curr) || char.IsDigit(curr) || curr == '_'))
                 {
                     kw.Append(curr);
-                    text.Advance();
+                    Text.Advance();
                 }
                 else
                 {
@@ -127,10 +127,10 @@ namespace Compiler.Scan
         {
             StringBuilder n = new StringBuilder("");
 
-            while (!text.IsExhausted && char.IsDigit(text.Current))
+            while (!Text.IsExhausted && char.IsDigit(Text.Current))
             {
-                n.Append(text.Current);
-                text.Advance();
+                n.Append(Text.Current);
+                Text.Advance();
             }
 
             return n.ToString();
@@ -138,54 +138,53 @@ namespace Compiler.Scan
 
         private string GetStringContents()
         {
-            // text.Advance(); // skip "
-            char curr = text.Current;
+            char curr = Text.Current;
             StringBuilder str = new StringBuilder();
 
             string error = null;
 
-            while (!text.IsExhausted) 
+            while (!Text.IsExhausted) 
             {
-                curr = text.Current;
+                curr = Text.Current;
 
                 if (curr == '"')
                 {
                     // TODO: what to do with error?
-                    text.Advance();
+                    Text.Advance();
                     return str.ToString();
                 }
                 if (curr == '\\')
                 {
-                    switch (text.Peek)
+                    switch (Text.Peek)
                     {
                         case 'n':
                             str.Append("\n");
-                            text.Advance();
+                            Text.Advance();
                             break;
                         case 't':
                             str.Append("\t");
-                            text.Advance();
+                            Text.Advance();
                             break;
                         case '\\':
                             str.Append("\\");
-                            text.Advance();
+                            Text.Advance();
                             break;
                         default:
-                            if (Text.IsDigit(text.Peek))
+                            if (Text.IsDigit(Text.Peek))
                             {
                                 int numberValue = Int16.Parse(GetNumberContents());
                                 str.Append(Convert.ToChar(numberValue));
                                 break;
                             }
-                            error = String.Format("unknown special character \\{0} at {1}", text.Peek, text.Pos);
+                            error = String.Format("unknown special character \\{0} at {1}", Text.Peek, Text.Pos);
                             break;
                     }
-                    text.Advance();
+                    Text.Advance();
                 }
                 else
                 {
                     str.Append(curr);
-                    text.Advance();
+                    Text.Advance();
                 }
             }
 

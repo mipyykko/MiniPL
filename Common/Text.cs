@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Compiler.Common
 {
@@ -6,11 +7,14 @@ namespace Compiler.Common
     {
         private readonly string text;
         public int End { get; private set; }
+        public List<string> Lines { get; private set; }
 
-        public Text(string text)
+        private Text(string text)
         {
             this.text = text;
-            this.End = text.Length;
+            End = text.Length;
+
+            Lines = new List<string>(text.Split('\n'));
         }
 
         public static Text Of(string text)
