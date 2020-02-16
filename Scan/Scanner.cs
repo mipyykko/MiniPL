@@ -17,109 +17,98 @@ namespace Compiler.Scan
             this.text = text;
         }
 
-        // TODO/FIXME: does startPos & endPos +1 on TypicalTokens 
-        // may need to do other way - depends on where advance called - includes " from string etc.
-        private SourceInfo GetSourceInfo => SourceInfo.Of((startPos, text.Pos), (text.Line, startLinePos, text.LinePos));
+        private SourceInfo GetSourceInfo(string token) {
+            int tokenLength = Math.Max(0, token.Length - 1);
+            return SourceInfo.Of(
+                (startPos, startPos + tokenLength), 
+                (text.Line, startLinePos, startLinePos + tokenLength)
+            );
+        }
 
+        public Token GetNextToken()
+        {
+            text.SkipSpacesAndComments();
+            char curr = text.Current;
+            char next = text.Peek;
+
+            if (text.IsExhausted)
+            {
+                return Token.Of(TokenType.EOF, GetSourceInfo(""));
+            }
+
+            startPos = text.Pos;
+            startLinePos = text.LinePos;
+            (TokenType tokenType, string token) = GetTrivialToken();
+
+            switch (tokenType)
+            {
+                case TokenType.Number:
+                    string numberContents = GetNumberContents(); // TODO: error check
+                    return Token.Of(TokenType.IntValue, numberContents, GetSourceInfo(numberContents));
+                case TokenType.Quote:
+                    string stringContents = GetStringContents(); // TODO: error check
+                    return Token.Of(TokenType.StringValue, stringContents, GetSourceInfo(stringContents));
+                case TokenType.Unknown:
+                    if (char.IsLetter(curr))
+                    {
+                        string atom = GetAtom();
+                        KeywordType kw = Token.GetKeywordType(atom);
+
+                        if (kw != KeywordType.Unknown)
+                        {
+                            return Token.Of(TokenType.Keyword, kw, atom, GetSourceInfo(atom));
+                        }
+                        return Token.Of(TokenType.Identifier, atom, GetSourceInfo(atom));
+                    }
+                    return Token.Of(TokenType.Unknown, $"{curr}", GetSourceInfo($"{curr}")); // TODO: error check?
+                default:
+                    return Token.Of(tokenType, token, GetSourceInfo(token));
+            }
+
+        }
         public List<Token> Scan()
         {
-            while (!text.IsExhausted)
+            Token t;
+            while ((t = GetNextToken()).Type != TokenType.EOF)
             {
-                text.SkipSpacesAndComments();
-                char curr = text.Current;
-                char next = text.Peek();
-
-                if (text.IsExhausted)
-                {
-                    break;
-                }
-
-                (TokenType tokenType, string token) = GetTrivialToken();
-                startPos = text.Pos;
-                startLinePos = text.LinePos;
-
-                switch (tokenType)
-                {
-                    case TokenType.Number:
-                        string numberContents = GetNumberContents();
-                        AddToken(TokenType.IntValue, numberContents);
-                        break;
-                    case TokenType.Quote:
-                        string stringContents = GetStringContents();
-                        AddToken(TokenType.StringValue, stringContents);
-                        break;
-                    case TokenType.Unknown:
-                        if (char.IsLetter(curr))
-                        {
-                            string atom = GetAtom();
-                            KeywordType kw = Token.GetKeywordType(atom);
-
-                            if (kw != KeywordType.Unknown)
-                            {
-                                AddToken(TokenType.Keyword, kw, atom);
-                                break;
-                            }
-                            AddToken(TokenType.Identifier, atom);
-                            break;
-                        }
-                        AddToken(TokenType.Unknown, curr);
-                        break;
-                    default:
-                        AddToken(tokenType, token);
-                        break;
-                }
-                text.Advance();
+                Console.WriteLine(t);
+                tokens.Add(t);
             }
-            AddToken(TokenType.EOF); 
 
-            foreach (Token tok in tokens)
-            {
-                Console.WriteLine(tok);
-            }
             return tokens;
-        }
-
-        private void AddToken(TokenType type, KeywordType kw, string contents)
-        {
-            (int start, int end) = GetSourceInfo.sourceRange;
-            Console.WriteLine("token contents {0}, source {1}", contents, text.Range(start, (end - start)));
-            tokens.Add(new Token(type, kw, contents, GetSourceInfo));
-        }
-        private void AddToken(TokenType type, string contents)
-        {
-            AddToken(type, KeywordType.Unknown, contents);
-        }
-        private void AddToken(TokenType type, char content) 
-        {
-            AddToken(type, KeywordType.Unknown, "" + content);
-        }
-        private void AddToken(TokenType type)
-        {
-            AddToken(type, "");
         }
 
         private (TokenType, string) GetTrivialToken()
         {
+            string curr = $"{text.Current}";
+
+            if (Text.IsDigit(text.Current)) {
+                return (TokenType.Number, curr);
+            }
+            if (char.IsLetter(text.Current)) // we don't have any trivial tokens starting with letters now
+            {
+                return (TokenType.Unknown, curr);
+            }
+
             foreach (string token in Token.TrivialTokenTypes.Keys)
             {
-                if (text.Pos + token.Length < text.End && text.Range(text.Pos, token.Length) == token)
+                if (text.Pos + token.Length <= text.End && text.Range(text.Pos, token.Length).Equals(token))
                 {
                     text.Advance(token.Length);
                     return (Token.TrivialTokenTypes[token], token);
                 }
             }
-            return (char.IsDigit(text.Current) ? TokenType.Number : TokenType.Unknown,
-                    $"{text.Current}");
+            return (TokenType.Unknown, curr);
         }
 
         private string GetAtom()
         {
-            StringBuilder kw = new StringBuilder($"{text.Current}");
+            StringBuilder kw = new StringBuilder("");
             char curr;
 
             while (!text.IsExhausted)
             {
-                curr = text.Peek();
+                curr = text.Current;
                 if (" \t\n".IndexOf(curr) < 0 && (char.IsLetter(curr) || char.IsDigit(curr) || curr == '_'))
                 {
                     kw.Append(curr);
@@ -136,12 +125,11 @@ namespace Compiler.Scan
 
         private string GetNumberContents()
         {
-            char curr = text.Current;
-            StringBuilder n = new StringBuilder($"{curr}");
+            StringBuilder n = new StringBuilder("");
 
-            while (!text.IsExhausted && char.IsDigit(curr = text.Peek()))
+            while (!text.IsExhausted && char.IsDigit(text.Current))
             {
-                n.Append(curr);
+                n.Append(text.Current);
                 text.Advance();
             }
 
@@ -168,28 +156,28 @@ namespace Compiler.Scan
                 }
                 if (curr == '\\')
                 {
-                    text.Advance();
-                    char peeked = text.Current;
-                    switch (peeked)
+                    switch (text.Peek)
                     {
                         case 'n':
                             str.Append("\n");
+                            text.Advance();
                             break;
                         case 't':
                             str.Append("\t");
+                            text.Advance();
                             break;
                         case '\\':
                             str.Append("\\");
-                            Console.WriteLine("wehey! {0}", str);
+                            text.Advance();
                             break;
                         default:
-                            if (char.IsDigit(peeked))
+                            if (Text.IsDigit(text.Peek))
                             {
                                 int numberValue = Int16.Parse(GetNumberContents());
                                 str.Append(Convert.ToChar(numberValue));
                                 break;
                             }
-                            error = String.Format("unknown special character \\{0} at {1}", peeked, text.Pos);
+                            error = String.Format("unknown special character \\{0} at {1}", text.Peek, text.Pos);
                             break;
                     }
                     text.Advance();
@@ -209,22 +197,6 @@ namespace Compiler.Scan
             //}
             //text.Advance();
             //return str.ToString();
-        }
-
-
-        private void HandleBlockComment()
-        {
-            text.Advance(2);
-
-            while (!text.IsExhausted) 
-            {
-                char curr = text.Next(); 
-                if (curr == '*' && text.Peek() == '/')
-                {
-                    text.Advance();
-                    return;
-                }
-            }
         }
     }
 }

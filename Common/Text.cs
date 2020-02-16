@@ -10,7 +10,7 @@ namespace Compiler.Common
         public Text(string text)
         {
             this.text = text;
-            this.End = text.Length - 1;
+            this.End = text.Length;
         }
 
         public static Text Of(string text)
@@ -21,22 +21,13 @@ namespace Compiler.Common
         public int Pos { get; private set; } = 0;
         public int Line { get; private set; } = 0;
         public int LinePos { get; private set; } = 0;
-        public bool IsExhausted => Pos > End;
-        public char Current => text[Pos];
+        public bool IsExhausted => Pos >= End;
+        public char Current => Pos < End ? text[Pos] : '\0';
+        public char Peek => Pos + 1 < End ? text[Pos + 1] : '\0';
 
         public string Range(int start, int len)
         {
             return text.Substring(start, len);
-        }
-
-        public char Peek()
-        {
-            if (Pos < End)
-            {
-                return text[Pos + 1];
-            }
-
-            return '\0';
         }
 
         public void Advance(int n)
@@ -67,7 +58,7 @@ namespace Compiler.Common
 
         public char Next()
         {
-            char p = Peek();
+            char p = Peek;
 
             if (p != '\0')
             {
@@ -85,17 +76,17 @@ namespace Compiler.Common
             {
                 done = true;
                 // line comment, skip this line and continue loop
-                if (Current == '/' && Peek() == '/')
+                if (Current == '/' && Peek == '/')
                 {
                     SkipLine();
                     done = false;
                     continue;
                 }
                 // block comment, advance until end marker or EOF
-                if (Current == '/' && Peek() == '*')
+                if (Current == '/' && Peek == '*')
                 {
                     Advance(2);
-                    while (!IsExhausted && (Current != '*' || Peek() != '/'))
+                    while (!IsExhausted && (Current != '*' || Peek != '/'))
                     { 
                         done = false;
                         Advance();
@@ -125,6 +116,11 @@ namespace Compiler.Common
         {
             while (Current != '\n' && !IsExhausted) { Advance(); }
             Advance();
+        }
+
+        public static bool IsDigit(char c)
+        {
+            return c >= '0' && c <= '9';
         }
     }
 }

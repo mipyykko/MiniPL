@@ -51,32 +51,40 @@ namespace Compiler.Common
 
     public class Token
     {
-        private readonly TokenType type;
-        private readonly KeywordType kw;
-        private readonly string content;
-        private readonly SourceInfo sourceInfo;
+        public TokenType Type { get; private set; }
+        public KeywordType KeywordType { get; private set; }
+        public string Content { get; private set; }
+        public SourceInfo SourceInfo {get; private set; }
 
         public Token(TokenType type, KeywordType kw, string content, SourceInfo sourceInfo)
         {
-            this.type = type;
-            this.kw = kw;
-            this.content = content;
-            this.sourceInfo = sourceInfo;
+            Type = type;
+            KeywordType = kw;
+            Content = content;
+            SourceInfo = sourceInfo;
         }
 
-        public Token(TokenType type, string content, SourceInfo sourceInfo) : this(type, KeywordType.Unknown, content, sourceInfo) { }
-        public Token(TokenType type, char c, SourceInfo sourceInfo) : this(type, KeywordType.Unknown, $"{c}", sourceInfo) { }
-        public Token(TokenType type, KeywordType kw, SourceInfo sourceInfo) : this(type, kw, "", sourceInfo) { }
-        public Token(TokenType type, SourceInfo sourceInfo) : this(type, KeywordType.Unknown, "", sourceInfo) { }
+        //public Token(TokenType type, string content, SourceInfo sourceInfo) : this(type, KeywordType.Unknown, content, sourceInfo) { }
+        //public Token(TokenType type, char c, SourceInfo sourceInfo) : this(type, KeywordType.Unknown, $"{c}", sourceInfo) { }
+        //public Token(TokenType type, KeywordType kw, SourceInfo sourceInfo) : this(type, kw, "", sourceInfo) { }
+        //public Token(TokenType type, SourceInfo sourceInfo) : this(type, KeywordType.Unknown, "", sourceInfo) { }
 
         public static Token Of(TokenType type, KeywordType kw, string content, SourceInfo sourceInfo)
         {
             return new Token(type, kw, content, sourceInfo);
         }
+        public static Token Of(TokenType type, SourceInfo sourceInfo)
+        {
+            return Token.Of(type, KeywordType.Unknown, "", sourceInfo);
+        }
+        public static Token Of(TokenType type, string content, SourceInfo sourceInfo)
+        {
+            return Token.Of(type, KeywordType.Unknown, content, sourceInfo);
+        }
 
         public override string ToString()
         {
-            return $"{type} {sourceInfo.sourceRange} {sourceInfo.lineRange} {kw} \"{content}\"";
+            return $"{Type} {SourceInfo.sourceRange} {SourceInfo.lineRange} {KeywordType} \"{Content}\"";
         }
 
         public static Dictionary<string, TokenType> TrivialTokenTypes = new Dictionary<string, TokenType>()

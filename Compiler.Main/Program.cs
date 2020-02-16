@@ -6,7 +6,7 @@ namespace Compiler.Main
     {
         public static void Main(string[] args)
         {
-            string test1 =
+            string test1 = 
 $@"var nTimes : int := 0;
 // this is a line comment
 // and this 
