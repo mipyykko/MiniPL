@@ -65,26 +65,17 @@ namespace Compiler.Common
         }
 
         public static Token Of(TokenType type, KeywordType kw, string content, SourceInfo sourceInfo)
-        {
-            return new Token(type, kw, content, sourceInfo);
-        }
+            => new Token(type, kw, content, sourceInfo);
         public static Token Of(TokenType type, SourceInfo sourceInfo)
-        {
-            return Token.Of(type, KeywordType.Unknown, "", sourceInfo);
-        }
+            => Of(type, KeywordType.Unknown, "", sourceInfo);
         public static Token Of(TokenType type, string content, SourceInfo sourceInfo)
-        {
-            return Token.Of(type, KeywordType.Unknown, content, sourceInfo);
-        }
+            => Of(type, KeywordType.Unknown, content, sourceInfo);
 
-        public override string ToString()
-        {
-            return $"{Type} {SourceInfo.sourceRange} {SourceInfo.lineRange} {KeywordType} \"{Content}\"";
-        }
+        public override string ToString() => 
+            $"{Type} {SourceInfo.SourceRange} {SourceInfo.LineRange} {KeywordType} \"{Content}\"";
 
         public static Dictionary<string, TokenType> TrivialTokenTypes = new Dictionary<string, TokenType>()
         {
-            // could be simplified to have "operator" and so on
             [":="] = TokenType.Assignment,
             [".."] = TokenType.Range,
             [";"] = TokenType.Separator,
@@ -120,8 +111,6 @@ namespace Compiler.Common
         };
 
         public static KeywordType GetKeywordType(string s)
-        {
-            return StringToKeywordType.TryGetValueOrDefault(s, KeywordType.Unknown);
-        }
+            => StringToKeywordType.TryGetValueOrDefault(s, KeywordType.Unknown);
     }
 }

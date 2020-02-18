@@ -47,6 +47,13 @@ namespace Compiler.Common
             [KeywordType.String] = NodeType.StringType
         };
 
+        public static Dictionary<NodeType, NodeType> TypeToValue = new Dictionary<NodeType, NodeType>()
+        {
+            [NodeType.IntType] = NodeType.IntValue,
+            [NodeType.BoolType] = NodeType.BoolValue,
+            [NodeType.StringType] = NodeType.StringValue
+        };
+
         public static Dictionary<TokenType, NodeType> TokenToNodeType = new Dictionary<TokenType, NodeType>()
         {
             [TokenType.IntValue] = NodeType.IntValue,
@@ -83,16 +90,18 @@ namespace Compiler.Common
         {
             StringBuilder sb = new StringBuilder();
 
-            return $"{Type}: {Value}";
+            return $"{Parent?.Type.ToString()} {Type}: {Value}";
         }
 
         public void AddChild(Node node)
         {
+            node.Parent = this;
             Children.Add(node);
         }
 
         public void RemoveChild(Node node)
         {
+            node.Parent = null;
             Children.Remove(node);
         }
 
@@ -102,9 +111,30 @@ namespace Compiler.Common
         }
         public static Node Of(NodeType type, params Node[] children)
         {
-            Node n = Node.Of(type);
+            Node n = Of(type);
             n.Children = new List<Node>(children);
+
+            foreach (Node child in n.Children)
+            {
+                child.Parent = n;
+            }
             return n;
         }
+
+        public static void PrintTree(Node node, int depth = 0)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            Console.WriteLine($"{new string(' ', depth * 2)}{node}");
+
+            foreach (Node child in node.Children)
+            {
+                PrintTree(child, depth + 1);
+            }
+        }
+
     }
 }

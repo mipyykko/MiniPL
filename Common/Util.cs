@@ -18,5 +18,10 @@ namespace Compiler.Common
 
             return dictionary.TryGetValue(key, out U value) ? value : defaultValue;
         }
+
+        public static bool Includes<T>(this T[] array, T value)
+        {
+            return Array.IndexOf(array, value) >= 0;
+        }
     }
 }

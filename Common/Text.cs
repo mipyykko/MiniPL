@@ -17,10 +17,7 @@ namespace Compiler.Common
             Lines = new List<string>(text.Split('\n'));
         }
 
-        public static Text Of(string text)
-        {
-            return new Text(text);
-        }
+        public static Text Of(string text) => new Text(text);
 
         public int Pos { get; private set; } = 0;
         public int Line { get; private set; } = 0;
@@ -28,11 +25,9 @@ namespace Compiler.Common
         public bool IsExhausted => Pos >= End;
         public char Current => Pos < End ? text[Pos] : '\0';
         public char Peek => Pos + 1 < End ? text[Pos + 1] : '\0';
+        public string NextTwo => $"{Current}{Peek}";
 
-        public string Range(int start, int len)
-        {
-            return text.Substring(start, len);
-        }
+        public string Range(int start, int len) => text.Substring(start, len);
 
         public void Advance(int n)
         {
@@ -55,10 +50,7 @@ namespace Compiler.Common
             }
         }
 
-        public void Advance()
-        {
-            Advance(1);
-        }
+        public void Advance() => Advance(1);
 
         public char Next()
         {
@@ -80,17 +72,17 @@ namespace Compiler.Common
             {
                 done = true;
                 // line comment, skip this line and continue loop
-                if (Current == '/' && Peek == '/')
+                if (NextTwo == "//")
                 {
                     SkipLine();
                     done = false;
                     continue;
                 }
                 // block comment, advance until end marker or EOF
-                if (Current == '/' && Peek == '*')
+                if (NextTwo == "/*")
                 {
                     Advance(2);
-                    while (!IsExhausted && (Current != '*' || Peek != '/'))
+                    while (!IsExhausted && NextTwo != "*/")
                     { 
                         done = false;
                         Advance();
@@ -122,9 +114,6 @@ namespace Compiler.Common
             Advance();
         }
 
-        public static bool IsDigit(char c)
-        {
-            return c >= '0' && c <= '9';
-        }
+        public static bool IsDigit(char c) => c >= '0' && c <= '9';
     }
 }

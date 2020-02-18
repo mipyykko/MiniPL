@@ -17,11 +17,14 @@ namespace Compiler.Scan
             Text = text;
         }
 
-        private SourceInfo GetSourceInfo(string token) {
+        private (int Start, int End) TokenRange(string token) => (startPos, startPos + Math.Max(0, token.Length - 1));
+        private (int Line, int Start, int End) TokenLineRange(string token) => (Text.Line, startLinePos, startLinePos + Math.Max(0, token.Length - 1));
+
+            private SourceInfo GetSourceInfo(string token) {
             int tokenLength = Math.Max(0, token.Length - 1);
             return SourceInfo.Of(
-                (startPos, startPos + tokenLength), 
-                (Text.Line, startLinePos, startLinePos + tokenLength)
+                TokenRange(token),
+                TokenLineRange(token)
             );
         }
 
@@ -48,18 +51,16 @@ namespace Compiler.Scan
                 case TokenType.Quote:
                     string stringContents = GetStringContents(); // TODO: error check
                     return Token.Of(TokenType.StringValue, stringContents, GetSourceInfo(stringContents));
-                case TokenType.Unknown:
-                    if (char.IsLetter(curr))
-                    {
-                        string atom = GetAtom();
-                        KeywordType kw = Token.GetKeywordType(atom);
+                case TokenType.Unknown when char.IsLetter(curr):
+                    string atom = GetAtom();
+                    KeywordType kw = Token.GetKeywordType(atom.ToLower());
 
-                        if (kw != KeywordType.Unknown)
-                        {
-                            return Token.Of(TokenType.Keyword, kw, atom, GetSourceInfo(atom));
-                        }
-                        return Token.Of(TokenType.Identifier, atom, GetSourceInfo(atom));
+                    if (kw != KeywordType.Unknown)
+                    {
+                        return Token.Of(TokenType.Keyword, kw, atom, GetSourceInfo(atom));
                     }
+                    return Token.Of(TokenType.Identifier, atom, GetSourceInfo(atom));
+                case TokenType.Unknown:
                     return Token.Of(TokenType.Unknown, $"{curr}", GetSourceInfo($"{curr}")); // TODO: error check?
                 default:
                     return Token.Of(tokenType, token, GetSourceInfo(token));
@@ -92,7 +93,7 @@ namespace Compiler.Scan
 
             foreach (string token in Token.TrivialTokenTypes.Keys)
             {
-                if (Text.Pos + token.Length <= Text.End && Text.Range(Text.Pos, token.Length).Equals(token))
+                if (Text.Pos + token.Length <= Text.End && Text.Range(Text.Pos, token.Length).ToLower().Equals(token.ToLower()))
                 {
                     Text.Advance(token.Length);
                     return (Token.TrivialTokenTypes[token], token);
