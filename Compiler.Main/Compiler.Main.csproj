@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETCore.App">
+      <Version>3.0.0-preview8-28405-07</Version>
+    </PackageReference>
+    <ProjectReference Include="..\Compiler.Common\Compiler.Common.csproj" />
+    <ProjectReference Include="..\Compiler.Parse\Compiler.Parse.csproj" />
+    <ProjectReference Include="..\Compiler.Scan\Compiler.Scan.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+</Project>

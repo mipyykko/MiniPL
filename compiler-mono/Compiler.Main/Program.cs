@@ -2,12 +2,12 @@
 
 namespace Compiler.Main
 {
-    internal class MainClass
+    class MainClass
     {
         public static void Main(string[] args)
         {
-            var test1 =
-                $@"var nTimes : int := 0;
+            string test1 = 
+$@"var nTimes : int := 0;
 // this is a line comment
 // and this 
     print ""How many times ?"";
@@ -25,10 +25,9 @@ comment */
     end for;
     assert (x = nTimes);";
 
-            var test2 =
-                "a :=16664  + 2*( 3+6)/4  \n; var b : string := \"asdf\";// should be commented\n/* a := 1; \n asdf */";
+            string test2 = "a :=16664  + 2*( 3+6)/4  \n; var b : string := \"asdf\";// should be commented\n/* a := 1; \n asdf */";
 
-            var c = new Compiler(test1);
+            Compiler c = new Compiler(test1);
         }
     }
 }

@@ -9,8 +9,8 @@ namespace Compiler.Main
     {
         public Compiler(string source)
         {
-            var scanner = new Scanner(Text.Of(source));
-            var parse = new Parser(scanner);
+            Scanner scanner = new Scanner(Text.Of(source));
+            Parser parse = new Parser(scanner);
             parse.Program();
         }
     }
