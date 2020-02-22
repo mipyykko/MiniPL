@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Compiler.Interpret;
 
 namespace Compiler.Common
 {
-    public class Node
+    public class Node : IVisitable
     {
         public enum NodeType
         {
@@ -93,6 +94,12 @@ namespace Compiler.Common
             var sb = new StringBuilder();
 
             return $"{Parent?.Type.ToString()} {Type}: {Value}";
+        }
+
+        public void Accept(Visitor visitor)
+        {
+            
+            throw new NotImplementedException();
         }
 
         public void AddChild(Node node)

@@ -17,5 +17,24 @@ namespace Compiler.Common
         {
             return Array.IndexOf(array, value) >= 0;
         }
+        
+        public static PrimitiveType ToPrimitiveType(this KeywordType kw)
+        {
+            switch (kw)
+            {
+                case KeywordType.Int:
+                    return PrimitiveType.Int;
+                case KeywordType.String:
+                    return PrimitiveType.String;
+                case KeywordType.Bool:
+                    return PrimitiveType.Bool;
+                case KeywordType.Assert:
+                case KeywordType.Print:
+                case KeywordType.Read:
+                    return PrimitiveType.Void;
+                default:
+                    return PrimitiveType.Unknown;
+            }
+        }
     }
 }

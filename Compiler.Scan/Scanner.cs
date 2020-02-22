@@ -62,6 +62,8 @@ namespace Compiler.Scan
                     var atom = GetAtom();
                     var kw = Token.GetKeywordType(atom.ToLower());
 
+                    if (kw == KeywordType.False || kw == KeywordType.True)
+                        return Token.Of(TokenType.BoolValue, atom, GetSourceInfo(atom));
                     if (kw != KeywordType.Unknown) return Token.Of(TokenType.Keyword, kw, atom, GetSourceInfo(atom));
                     return Token.Of(TokenType.Identifier, atom, GetSourceInfo(atom));
                 case TokenType.Unknown:

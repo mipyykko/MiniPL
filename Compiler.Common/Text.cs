@@ -94,6 +94,7 @@ namespace Compiler.Common
                         Advance();
                         if (IsExhausted)
                         {
+                            // TODO: this would mean runaway comment? 
                             done = true;
                             break;
                         }

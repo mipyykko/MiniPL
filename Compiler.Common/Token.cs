@@ -46,7 +46,13 @@ namespace Compiler.Common
         Int,
         String,
         Bool,
-        Assert
+        Assert,
+        True,
+        False
+    }
+
+    static class KeywordTypeMethods
+    {
     }
 
     public class Token
@@ -123,7 +129,9 @@ namespace Compiler.Common
             ["int"] = KeywordType.Int,
             ["string"] = KeywordType.String,
             ["bool"] = KeywordType.Bool,
-            ["assert"] = KeywordType.Assert
+            ["assert"] = KeywordType.Assert,
+            ["true"] = KeywordType.True,
+            ["false"] = KeywordType.False
         };
 
         public static KeywordType GetKeywordType(string s)

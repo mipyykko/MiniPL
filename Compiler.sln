@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compiler.Scan", "Compiler.S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compiler.Parse", "Compiler.Parse\Compiler.Parse.csproj", "{66DCD401-F0BC-4CDA-A0AE-3462EE07AC6D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compiler.Interpret", "Compiler.Interpret\Compiler.Interpret.csproj", "{E9466A72-0AC9-4EDD-8529-B7FC4545A070}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -86,5 +88,17 @@ Global
 		{66DCD401-F0BC-4CDA-A0AE-3462EE07AC6D}.Release|x64.Build.0 = Release|Any CPU
 		{66DCD401-F0BC-4CDA-A0AE-3462EE07AC6D}.Release|x86.ActiveCfg = Release|Any CPU
 		{66DCD401-F0BC-4CDA-A0AE-3462EE07AC6D}.Release|x86.Build.0 = Release|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Debug|x64.Build.0 = Debug|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Debug|x86.Build.0 = Debug|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Release|x64.ActiveCfg = Release|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Release|x64.Build.0 = Release|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Release|x86.ActiveCfg = Release|Any CPU
+		{E9466A72-0AC9-4EDD-8529-B7FC4545A070}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
