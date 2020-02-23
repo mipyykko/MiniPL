@@ -17,16 +17,43 @@ namespace Compiler.Interpret
         }
 
 
-        public override void Visit(NameNode node)
+        private void UpdateSymbol(string id, PrimitiveType type, object value)
         {
-            return;
+            if (value == null)
+            {
+                SymbolTable[id] = (type, null);
+                return;
+            }
+            
+            switch (type)
+            {
+                case PrimitiveType.Int:
+                    SymbolTable[id] = (PrimitiveType.Int, int.Parse((string) value));
+                    break;
+                case PrimitiveType.String:
+                    SymbolTable[id] = (PrimitiveType.String, (string) value);
+                    break;
+                case PrimitiveType.Bool:
+                    SymbolTable[id] = (PrimitiveType.Bool, ((string) value).ToLower().Equals("true"));
+                    break;
+            }
+        }
+
+        private void UpdateSymbol(string id, object value)
+        {
+            UpdateSymbol(id, SymbolTable[id].Item1, value);
         }
         
-        public override void Visit(ProgramNode node)
-        {
-            Console.WriteLine("program");
-            node.Left.Accept(this);
-        }
+        // public override void Visit(NameNode node)
+        // {
+        //     return;
+        // }
+        //
+        // public override void Visit(ProgramNode node)
+        // {
+        //     Console.WriteLine("program");
+        //     node.Left.Accept(this);
+        // }
 
         public override void Visit(StatementNode node)
         {
@@ -48,23 +75,9 @@ namespace Compiler.Interpret
                 case FunctionType.Read:
                 {
                     var value = Console.ReadLine();
-                    var id = ((IdentifierNode) node.Arguments[0]).Name;
+                    var id = ((VariableNode) node.Arguments[0]).Token.Content;
 
-                    var (type, _) = SymbolTable[id];
-
-                    switch (type)
-                    {
-                        case PrimitiveType.Int:
-                            SymbolTable[id] = (PrimitiveType.Int, int.Parse(value));
-                            break;
-                        case PrimitiveType.String:
-                            SymbolTable[id] = (PrimitiveType.String, value);
-                            break;
-                        case PrimitiveType.Bool:
-                            SymbolTable[id] = (PrimitiveType.Bool, value.ToLower().Equals("true"));
-                            break;
-                    }
-
+                    UpdateSymbol(id, value);
                     break;
                 }
                 case FunctionType.Var:
@@ -75,16 +88,16 @@ namespace Compiler.Interpret
             }
         }
 
+        public override void Visit(NoOpNode node)
+        {
+            return;
+        }
+        
         public override void Visit(StatementListNode node)
         {
             Console.WriteLine("statementlist {0}", node);
             node.Left.Accept(this);
             node.Right.Accept(this);
-        }
-
-        public override void Visit(OperatorNode node)
-        {
-            throw new System.NotImplementedException();
         }
 
         public override void Visit(BinaryNode node)
@@ -94,27 +107,27 @@ namespace Compiler.Interpret
             node.Right.Accept(this);
             var opnd2 = LatestResult;
 
-            switch (node.Operator)
+            switch (node.Op.Type)
             {
-                case OperatorType.Addition:
+                case TokenType.Addition:
                     LatestResult = (int) opnd1 + (int) opnd2;
                     break;
-                case OperatorType.Subtraction:
+                case TokenType.Subtraction:
                     LatestResult = (int) opnd1 - (int) opnd2;
                     break;
-                case OperatorType.Multiplication:
+                case TokenType.Multiplication:
                     LatestResult = (int) opnd1 * (int) opnd2;
                     break;
-                case OperatorType.Division:
+                case TokenType.Division:
                     LatestResult = (int) opnd1 / (int) opnd2;
                     break;
-                case OperatorType.And:
+                case TokenType.And:
                     LatestResult = (bool) opnd1 && (bool) opnd2;
                     break;
-                case OperatorType.LessThan:
+                case TokenType.LessThan:
                     LatestResult = (int) opnd1 < (int) opnd2;
                     break;
-                case OperatorType.Equals:
+                case TokenType.Equals:
                     LatestResult = opnd1 == opnd2;
                     break;
             }
@@ -127,37 +140,50 @@ namespace Compiler.Interpret
             LatestResult = !((bool) LatestResult);
         }
 
-        public override void Visit(VarAssignmentNode node)
+        public override void Visit(AssignmentNode node)
         {
-            var id = node.Name;
+            var id = node.Token.Content;
             node.Value.Accept(this);
             var value = LatestResult;
-            
-            if (!SymbolTable.ContainsKey(id))
+            var type = PrimitiveType.Unknown;
+
+            if (node.Declaration)
             {
-                throw new Exception($"variable {id} not declared");
+                if (SymbolTable.ContainsKey(id))
+                {
+                    throw new Exception($"variable {id} already defined");
+                }
+
+                type = node.GivenType;
+            }
+            else
+            {
+                if (!SymbolTable.ContainsKey(id))
+                {
+                    throw new Exception($"variable {id} not declared");
+                }
+                type = SymbolTable[id].Item1;
             }
 
-            var type = SymbolTable[id].Item1;
-            SymbolTable[id] = (type, value);
+            UpdateSymbol(id, type, value);
             Console.WriteLine($"modified {id} {type} {value}");
         }
 
-        public override void Visit(VarDeclarationNode node)
-        {
-            var id = node.Name;
-            var type = node.DeclaredType;
-            node.Value.Accept(this);
-            var value = LatestResult;
-
-            if (SymbolTable.ContainsKey(id))
-            {
-                throw new Exception($"variable {id} already defined");
-            }
-            
-            SymbolTable.Add(id, (type, value));
-            Console.WriteLine($"assigned {id} {type} {value}");
-        }
+        // public override void Visit(VarDeclarationNode node)
+        // {
+        //     var id = node.Name;
+        //     var type = node.DeclaredType;
+        //     node.Value.Accept(this);
+        //     var value = LatestResult;
+        //
+        //     if (SymbolTable.ContainsKey(id))
+        //     {
+        //         throw new Exception($"variable {id} already defined");
+        //     }
+        //     
+        //     SymbolTable.Add(id, (type, value));
+        //     Console.WriteLine($"assigned {id} {type} {value}");
+        // }
 
         public void SetResult(PrimitiveType type, object value)
         {
@@ -190,9 +216,9 @@ namespace Compiler.Interpret
             }
         }
 
-        public override void Visit(IdentifierNode node)
+        public override void Visit(VariableNode node)
         {
-            var name = node.Name;
+            var name = node.Token.Content;
             if (!SymbolTable.ContainsKey(name))
             {
                 throw new Exception($"{name} not declared");
@@ -201,12 +227,12 @@ namespace Compiler.Interpret
             (var type, var value) = SymbolTable[name];
             LatestResult = value;
 
-            Console.WriteLine("name {0}", node.Name);
+            Console.WriteLine("name {0}", node.Token.Content);
         }
 
-        public override void Visit(EOFNode node)
-        {
-            Console.WriteLine("done");
-        }
+        // public override void Visit(EOFNode node)
+        // {
+        //     Console.WriteLine("done");
+        // }
     }
 }

@@ -81,7 +81,7 @@ namespace Parse
         {
             NextToken();
 
-            ProgramNode tree = new ProgramNode();
+            StatementListNode tree = new StatementListNode();
             switch (TokenType)
             {
                 case TokenType.Keyword when !StatementFirstKeywords.Includes(TokenKeywordType):
@@ -147,8 +147,6 @@ namespace Parse
                     node.Right = StatementList();
                     break;
                 case TokenType.EOF:
-                    node.Left = new EOFNode();
-                    node.Right = new EOFNode();
                     break;
                 default:
                     UnexpectedTokenError(null);
@@ -219,13 +217,13 @@ namespace Parse
 
         private Node AssignmentStatement()
         {
-            var id = ValueOrIdentifier(TokenType.Identifier);
+            var id = MatchTokenType(TokenType.Identifier);
             MatchTokenType(TokenType.Assignment);
             var expr = Expression();
 
-            return new VarAssignmentNode
+            return new AssignmentNode
             {
-                Name = ((NameNode) id).Name,
+                Token = id,
                 Value = expr
             }; 
         }
@@ -259,13 +257,17 @@ namespace Parse
         private Node ReadStatement()
         {
             NextToken();
-            var id = ValueOrIdentifier(TokenType.Identifier);
+            var id = MatchTokenType(TokenType.Identifier);
 
-            Console.WriteLine($"read with id {((IdentifierNode) id).Name}");
+            Console.WriteLine($"read with id {id.Content}");
             return new StatementNode
             {
                 Function = FunctionType.Read,
-                Arguments = new List<Node> { id }
+                Arguments = new List<Node> { new VariableNode
+                    {
+                        Token = id
+                    } 
+                }
             };
         }
 
@@ -273,7 +275,7 @@ namespace Parse
         {
             NextToken();
 
-            var id = ValueOrIdentifier(TokenType.Identifier);
+            var id = MatchTokenType(TokenType.Identifier);
             MatchKeywordType(KeywordType.In);
             var rangeStart = Expression();
             MatchTokenType(TokenType.Range);
@@ -286,23 +288,22 @@ namespace Parse
 
         public Node VarStatement()
         {
-            var n = new VarDeclarationNode();
+            var n = new AssignmentNode();
 
             NextToken();
-            var id = ValueOrIdentifier(TokenType.Identifier);
+            var id = MatchTokenType(TokenType.Identifier);
             MatchTokenType(TokenType.Colon);
             var type = Type();
-
-            n.DeclaredType = type;
-            n.Name = ((NameNode) id).Name;
             
             if (TokenType == TokenType.Separator)
             {
-                n.Value = new LiteralNode
+                return new AssignmentNode
                 {
-                    ValueType = type
+                    Token = id,
+                    GivenType = type,
+                    Declaration = true,
+                    Value = new NoOpNode()
                 };
-                return n;
             }
 
             MatchTokenType(TokenType.Assignment);
@@ -310,9 +311,13 @@ namespace Parse
 
             // CheckType(value, type.Type);
 
-            n.Value = value;
-
-            return n;
+            return new AssignmentNode
+            {
+                Token = id,
+                GivenType = type,
+                Value = value,
+                Declaration = true
+            };
         }
 
         // public void CheckType(Node n, NodeType nt)
@@ -374,7 +379,7 @@ namespace Parse
                         return new BinaryNode
                         {
                             Left = opnd1,
-                            Operator = op,
+                            Op = op,
                             Right = opnd2
                         };
                     }
@@ -408,8 +413,22 @@ namespace Parse
                 case TokenType.IntValue:
                 case TokenType.StringValue:
                 case TokenType.BoolValue:
+                {
+                    var t = MatchTokenType(TokenType);
+                    return new LiteralNode
+                    {
+                        Value = t.Content,
+                        ValueType = t.KeywordType.ToPrimitiveType()
+                    };
+                }
                 case TokenType.Identifier:
-                    return ValueOrIdentifier(TokenType);
+                {
+                    var t = MatchTokenType(TokenType);
+                    return new VariableNode
+                    {
+                        Token = t
+                    };
+                }
                 case TokenType.OpenParen:
                     MatchTokenType(TokenType.OpenParen);
                     var n = Expression();
@@ -442,35 +461,34 @@ namespace Parse
             [TokenType.BoolValue] = PrimitiveType.Bool,
         };
 
-        public OperatorType Operator()
+        public Token Operator()
         {
             var t = MatchTokenType(TokenType.Operator);
-            var ot = ToOperatorType.TryGetValueOrDefault(t.Content, OperatorType.Unknown);
 
-            if (ot == OperatorType.Unknown) UnexpectedTokenError(null);
+            if (t.Type == TokenType.Unknown) UnexpectedTokenError(null);
 
-            return ot;
+            return t;
         }
 
-        public Node ValueOrIdentifier(TokenType tt)
-        {
-            var t = MatchTokenType(tt);
-
-            switch (tt)
-            {
-                case TokenType.Identifier:
-                    return new IdentifierNode
-                    {
-                        Name = t.Content
-                    };
-                default:
-                    return new LiteralNode
-                    {
-                        Value = t.Content,
-                        ValueType = TokenToPrimitiveType.TryGetValueOrDefault(tt, PrimitiveType.Unknown)
-                    };
-            }
-        }
+        // public Node ValueOrIdentifier(TokenType tt)
+        // {
+        //     var t = MatchTokenType(tt);
+        //
+        //     switch (tt)
+        //     {
+        //         case TokenType.Identifier:
+        //             return new IdentifierNode
+        //             {
+        //                 Name = t.Content
+        //             };
+        //         default:
+        //             return new LiteralNode
+        //             {
+        //                 Value = t.Content,
+        //                 ValueType = TokenToPrimitiveType.TryGetValueOrDefault(tt, PrimitiveType.Unknown)
+        //             };
+        //     }
+        // }
 
         /*
         public Node UnaryOperator() // TODO: this was a bit wonky 

@@ -18,29 +18,31 @@ namespace Compiler.Common.AST
         public abstract void Accept(Visitor visitor);
     }
 
-    public class EOFNode : Node
-    {
-        public override PrimitiveType Type { get; }
+    // public class EOFNode : Node
+    // {
+    //     public override PrimitiveType Type { get; }
+    //
+    //     public override void Accept(Visitor visitor) => visitor.Visit(this);
+    // }
+    //
+    // public class OperatorNode : Node
+    // {
+    //     public OperatorType Operator;
+    //
+    //     public OperatorNode()
+    //     {
+    //     }
+    //
+    //     public override PrimitiveType Type { get; }
+    //     public override void Accept(Visitor visitor) { visitor.Visit(this); }
+    // }
 
-        public override void Accept(Visitor visitor) => visitor.Visit(this);
-    }
-    
-    public class OperatorNode : Node
-    {
-        public OperatorType Operator;
-
-        public OperatorNode()
-        {
-        }
-
-        public override PrimitiveType Type { get; }
-        public override void Accept(Visitor visitor) { visitor.Visit(this); }
-    }
-    public class BinaryNode : OperatorNode
+    public class BinaryNode : Node
     {
         public Node Left;
         public Node Right;
-
+        public Token Op;
+        
         public BinaryNode() {
         }
         
@@ -48,20 +50,21 @@ namespace Compiler.Common.AST
         {
             get
             {
-                switch (Operator)
+                switch (Op.Type)
                 {
-                    case OperatorType.Multiplication:
-                    case OperatorType.Division:
-                    case OperatorType.Subtraction:
-                    case OperatorType.Addition when Left.Type == Right.Type && Left.Type == PrimitiveType.Int: 
+                    case TokenType.Multiplication:
+                    case TokenType.Division:
+                    case TokenType.Subtraction:
+                    case TokenType.Range:
+                    case TokenType.Addition when Left.Type == Right.Type && Left.Type == PrimitiveType.Int: 
                         return PrimitiveType.Int;
-                    case OperatorType.Addition when Left.Type == Right.Type && Left.Type == PrimitiveType.String:
+                    case TokenType.Addition when Left.Type == Right.Type && Left.Type == PrimitiveType.String:
                         return PrimitiveType.String;
-                    case OperatorType.Addition:
+                    case TokenType.Addition:
                         goto default;
-                    case OperatorType.And:
-                    case OperatorType.LessThan:
-                    case OperatorType.Equals:
+                    case TokenType.And:
+                    case TokenType.LessThan:
+                    case TokenType.Equals:
                         return PrimitiveType.Bool;
                     default:
                         throw new Exception("type error");
@@ -72,10 +75,10 @@ namespace Compiler.Common.AST
         public override void Accept(Visitor visitor) { visitor.Visit(this); }
     }
 
-    public class UnaryNode : OperatorNode
+    public class UnaryNode : Node
     {
         public Node Value;
-        
+        public Token Op;
         public UnaryNode() {}
 
         public override PrimitiveType Type => PrimitiveType.Bool;
@@ -98,29 +101,41 @@ namespace Compiler.Common.AST
         public override void Accept(Visitor visitor) { visitor.Visit(this); }
     }
 
-    public class IdentifierNode : NameNode
+    public class NoOpNode : Node
     {
-        public IdentifierNode()
+        public override PrimitiveType Type { get; }
+        public override void Accept(Visitor visitor) => visitor.Visit(this);
+    }
+    
+    public class VariableNode : Node
+    {
+        public Token Token;
+        
+        public VariableNode()
         {}
 
-        public override PrimitiveType Type => PrimitiveType.Unknown;
+        public override PrimitiveType Type => PrimitiveType.Unknown; // TODO
+
         public override void Accept(Visitor visitor) { visitor.Visit(this); }
     }
     
-    public class VarDeclarationNode : NameNode
+    // public class VarDeclarationNode : NameNode
+    // {
+    //     public PrimitiveType DeclaredType;
+    //     
+    //     public VarDeclarationNode()
+    //     {}
+    //
+    //     public override PrimitiveType Type => DeclaredType;
+    //     public override void Accept(Visitor visitor) { visitor.Visit(this); }
+    // }
+    public class AssignmentNode : Node
     {
-        public PrimitiveType DeclaredType;
+        public Token Token;    
+        public PrimitiveType GivenType;
+        public bool Declaration = false;
         
-        public VarDeclarationNode()
-        {}
-
-        public override PrimitiveType Type => DeclaredType;
-        public override void Accept(Visitor visitor) { visitor.Visit(this); }
-    }
-    public class VarAssignmentNode : NameNode
-    {
-
-        public VarAssignmentNode()
+        public AssignmentNode()
         {
         }
         
@@ -128,17 +143,17 @@ namespace Compiler.Common.AST
         public override void Accept(Visitor visitor) { visitor.Visit(this); }
     }
 
-    public class ProgramNode : Node
-    {
-        public Node Left;
-
-        public ProgramNode()
-        {
-        }
-
-        public override PrimitiveType Type => PrimitiveType.Void;
-        public override void Accept(Visitor visitor) { visitor.Visit(this); }
-    }
+    // public class ProgramNode : Node
+    // {
+    //     public Node Left;
+    //
+    //     public ProgramNode()
+    //     {
+    //     }
+    //
+    //     public override PrimitiveType Type => PrimitiveType.Void;
+    //     public override void Accept(Visitor visitor) { visitor.Visit(this); }
+    // }
 
     public class StatementListNode : Node
     {
@@ -166,15 +181,15 @@ namespace Compiler.Common.AST
         public override void Accept(Visitor visitor) { visitor.Visit(this); }
     }
 
-    public class NameNode : Node
-    {
-        public string Name;
-
-        public NameNode()
-        {            
-        }
-
-        public override PrimitiveType Type { get; }
-        public override void Accept(Visitor visitor) { visitor.Visit(this); }
-    }
+    // public class NameNode : Node
+    // {
+    //     public string Name;
+    //
+    //     public NameNode()
+    //     {            
+    //     }
+    //
+    //     public override PrimitiveType Type { get; }
+    //     public override void Accept(Visitor visitor) { visitor.Visit(this); }
+    // }
 }
