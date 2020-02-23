@@ -224,7 +224,7 @@ namespace Parse
             return new AssignmentNode
             {
                 Token = id,
-                Value = expr
+                Expression = expr
             }; 
         }
 
@@ -302,7 +302,7 @@ namespace Parse
                     Token = id,
                     GivenType = type,
                     Declaration = true,
-                    Value = new NoOpNode()
+                    Expression = new NoOpNode()
                 };
             }
 
@@ -315,7 +315,7 @@ namespace Parse
             {
                 Token = id,
                 GivenType = type,
-                Value = value,
+                Expression = value,
                 Declaration = true
             };
         }
@@ -394,7 +394,7 @@ namespace Parse
 
                     return new UnaryNode
                     {
-                        Value = opnd
+                        Expression = opnd
                     };
                 }
                 default:
@@ -418,7 +418,7 @@ namespace Parse
                     return new LiteralNode
                     {
                         Value = t.Content,
-                        ValueType = t.KeywordType.ToPrimitiveType()
+                        ValueType = TokenToPrimitiveType.TryGetValueOrDefault(t.Type)
                     };
                 }
                 case TokenType.Identifier:
@@ -441,19 +441,7 @@ namespace Parse
 
             return null; //Node.Of(NodeType.Unknown);
         }
-
-        public static Dictionary<string, OperatorType> ToOperatorType = new Dictionary<string, OperatorType>()
-        {
-            ["*"] = OperatorType.Multiplication,
-            ["/"] = OperatorType.Division,
-            ["+"] = OperatorType.Addition,
-            ["-"] = OperatorType.Subtraction,
-            ["&"] = OperatorType.And,
-            ["="] = OperatorType.Equals,
-            ["<"] = OperatorType.LessThan,
-            ["!"] = OperatorType.Not
-        };
-
+        
         public static Dictionary<TokenType, PrimitiveType> TokenToPrimitiveType = new Dictionary<TokenType, PrimitiveType>()
         {
             [TokenType.IntValue] = PrimitiveType.Int,
