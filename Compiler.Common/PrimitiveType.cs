@@ -4,10 +4,9 @@ namespace Compiler.Common
 {
     public enum PrimitiveType
     {
-        Unknown,
+        Void,
         Int,
         String,
-        Bool,
-        Void
+        Bool
     }
 }

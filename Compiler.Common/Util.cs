@@ -33,7 +33,7 @@ namespace Compiler.Common
                 case KeywordType.Read:
                     return PrimitiveType.Void;
                 default:
-                    return PrimitiveType.Unknown;
+                    return PrimitiveType.Void;
             }
         }
     }

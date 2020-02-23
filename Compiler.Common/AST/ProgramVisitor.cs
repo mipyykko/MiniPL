@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Compiler.Common;
@@ -23,19 +24,21 @@ namespace Compiler.Interpret
                 SymbolTable[id] = (type, null);
                 return;
             }
-            
-            switch (type)
-            {
-                case PrimitiveType.Int:
-                    SymbolTable[id] = (PrimitiveType.Int, int.Parse((string) value));
-                    break;
-                case PrimitiveType.String:
-                    SymbolTable[id] = (PrimitiveType.String, (string) value);
-                    break;
-                case PrimitiveType.Bool:
-                    SymbolTable[id] = (PrimitiveType.Bool, ((string) value).ToLower().Equals("true"));
-                    break;
-            }
+
+            var val = ParseResult(type, value);
+            SymbolTable[id] = (type, val);
+            // switch (type)
+            // {
+            //     case PrimitiveType.Int:
+            //         SymbolTable[id] = (PrimitiveType.Int, int.Parse((string) value));
+            //         break;
+            //     case PrimitiveType.String:
+            //         SymbolTable[id] = (PrimitiveType.String, (string) value);
+            //         break;
+            //     case PrimitiveType.Bool:
+            //         SymbolTable[id] = (PrimitiveType.Bool, ((string) value).ToLower().Equals("true"));
+            //         break;
+            // }
         }
 
         private void UpdateSymbol(string id, object value)
@@ -78,9 +81,6 @@ namespace Compiler.Interpret
                     UpdateSymbol(id, value);
                     break;
                 }
-                case FunctionType.Var:
-                    
-                    break;
                 default:
                     break;
             }
@@ -88,6 +88,31 @@ namespace Compiler.Interpret
             return null;
         }
 
+        public override object Visit(ForNode node)
+        {
+            var id = node.Token;
+            var rangeStart = node.RangeStart.Accept(this);
+            var rangeEnd = node.RangeEnd.Accept(this);
+            
+            if (!(rangeStart is int) || !(rangeEnd is int))
+            {
+                throw new Exception("invalid range");
+            }
+
+            int i = 0;
+
+            do
+            {
+                UpdateSymbol(id.Content, i);
+                node.Statements.Accept(this);
+                i++;
+            } while (i <= (int) rangeEnd + 1);
+
+            
+            Debug.WriteLine($"got to {SymbolTable[id.Content]}");
+            return null;
+        }
+        
         public override object Visit(NoOpNode node)
         {
             return null;
@@ -138,7 +163,7 @@ namespace Compiler.Interpret
                 case OperatorType.LessThan:
                     return (int) opnd1 < (int) opnd2;
                 case OperatorType.Equals:
-                    return opnd1 == opnd2;
+                    return opnd1.Equals(opnd2);
             }
             return null;
         }
@@ -152,7 +177,7 @@ namespace Compiler.Interpret
         {
             var id = node.Token.Content;
             var value = node.Expression.Accept(this);
-            var type = PrimitiveType.Unknown;
+            var type = PrimitiveType.Void;
 
             if (node.Declaration)
             {
@@ -161,7 +186,7 @@ namespace Compiler.Interpret
                     throw new Exception($"variable {id} already defined");
                 }
 
-                type = node.GivenType;
+                type = node.Type;
             }
             else
             {
@@ -173,7 +198,7 @@ namespace Compiler.Interpret
             }
 
             UpdateSymbol(id, type, value);
-            Console.WriteLine($"modified {id} {type} {value}");
+            Debug.WriteLine($"modified {id} {type} {value}");
 
             return value;
         }
@@ -198,21 +223,21 @@ namespace Compiler.Interpret
         {
             switch (type)
             {
-                case PrimitiveType.Int:
+                case PrimitiveType.Int when value is string:
                     return int.Parse((string) value);
                 case PrimitiveType.String:
                     return (string) value;
-                case PrimitiveType.Bool:
+                case PrimitiveType.Bool when value is string:
                     return ((string) value).ToLower().Equals("true");
                 default:
-                    return null;
+                    return value;
             }
         }
         public override object Visit(LiteralNode node)
         {
             Console.WriteLine("literal {0}", node.Value);
 
-            return node.Value; // ParseResult(node.Type, node.Value);
+            return ParseResult(node.Type, node.Value);
         }
 
         public override object Visit(VariableNode node)

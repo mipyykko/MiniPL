@@ -6,6 +6,7 @@ namespace Compiler.Common
         Read,
         Print,
         Assert,
-        Var
+        Var,
+        For
     }
 }

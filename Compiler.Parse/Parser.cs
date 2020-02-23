@@ -128,6 +128,9 @@ namespace Parse
             switch (TokenType)
             {
                 case TokenType.Keyword when DoBlock && TokenKeywordType == KeywordType.End:
+                case TokenType.EOF: 
+                    node.Left = new NoOpNode();
+                    node.Right = new NoOpNode();
                     break;
                 case TokenType.Keyword when StatementFirstKeywords.Includes(TokenKeywordType):
                     node.Left = Statement();
@@ -145,8 +148,6 @@ namespace Parse
                     node.Left = Statement();
                     MatchTokenType(TokenType.Separator);
                     node.Right = StatementList();
-                    break;
-                case TokenType.EOF:
                     break;
                 default:
                     UnexpectedTokenError(null);
@@ -230,13 +231,14 @@ namespace Parse
 
         private Node AssertStatement()
         {
-            NextToken();
+            var token = MatchKeywordType(KeywordType.Assert);
             MatchTokenType(TokenType.OpenParen);
             var expr = Expression();
             MatchTokenType(TokenType.CloseParen);
 
             return new StatementNode
             {
+                Token = token,
                 Function = FunctionType.Assert,
                 Arguments = new List<Node> { expr }
             };
@@ -244,11 +246,12 @@ namespace Parse
 
         private Node PrintStatement()
         {
-            NextToken();
+            var token = MatchKeywordType(KeywordType.Print);
             var value = Expression();
 
             return new StatementNode
             {
+                Token = token,
                 Function = FunctionType.Print,
                 Arguments = new List<Node> { value }
             };
@@ -256,12 +259,13 @@ namespace Parse
 
         private Node ReadStatement()
         {
-            NextToken();
+            var token = MatchKeywordType(KeywordType.Read);
             var id = MatchTokenType(TokenType.Identifier);
 
             Console.WriteLine($"read with id {id.Content}");
             return new StatementNode
             {
+                Token = token,
                 Function = FunctionType.Read,
                 Arguments = new List<Node> { new VariableNode
                     {
@@ -273,7 +277,7 @@ namespace Parse
 
         private Node ForStatement()
         {
-            NextToken();
+            NextToken(); // TODO: match keyword, add variable in ForNode
 
             var id = MatchTokenType(TokenType.Identifier);
             MatchKeywordType(KeywordType.In);
@@ -283,27 +287,34 @@ namespace Parse
 
             var statements = DoEndBlock(KeywordType.For);
 
-            return new StatementNode(); // TODO
+            return new ForNode
+            {
+                Token = id,
+                RangeStart = rangeStart,
+                RangeEnd = rangeEnd,
+                Statements = statements
+            };
         }
 
         public Node VarStatement()
         {
-            var n = new AssignmentNode();
-
-            NextToken();
+            MatchKeywordType(KeywordType.Var);
+            // TODO: can do without declaration if we get this token in assignment
+            // and introduce variable as separate
             var id = MatchTokenType(TokenType.Identifier);
             MatchTokenType(TokenType.Colon);
             var type = Type();
             
+            var n = new AssignmentNode
+            {
+                Token = id,
+                Type = type,
+                Declaration = true
+            };
             if (TokenType == TokenType.Separator)
             {
-                return new AssignmentNode
-                {
-                    Token = id,
-                    GivenType = type,
-                    Declaration = true,
-                    Expression = new NoOpNode()
-                };
+                n.Expression = new NoOpNode();
+                return n;
             }
 
             MatchTokenType(TokenType.Assignment);
@@ -311,13 +322,8 @@ namespace Parse
 
             // CheckType(value, type.Type);
 
-            return new AssignmentNode
-            {
-                Token = id,
-                GivenType = type,
-                Expression = value,
-                Declaration = true
-            };
+            n.Expression = value;
+            return n;
         }
 
         // public void CheckType(Node n, NodeType nt)
@@ -353,7 +359,7 @@ namespace Parse
             if (tt == null)
             {
                 UnexpectedKeywordError(expectedTypes);
-                return PrimitiveType.Unknown;
+                return PrimitiveType.Void;
             }
 
             // anytype should never happen after ^
@@ -418,7 +424,7 @@ namespace Parse
                     return new LiteralNode
                     {
                         Value = t.Content,
-                        ValueType = TokenToPrimitiveType.TryGetValueOrDefault(t.Type)
+                        Type = TokenToPrimitiveType.TryGetValueOrDefault(t.Type)
                     };
                 }
                 case TokenType.Identifier:

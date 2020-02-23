@@ -18,6 +18,8 @@ namespace Compiler.Interpret
         public abstract object Visit(LiteralNode node);
 
         public abstract object Visit(NoOpNode node);
+
+        public abstract object Visit(ForNode node);
         // public abstract void Visit(NameNode node);
         // public abstract void Visit(EOFNode node);
         // public abstract void Visit(IdentifierNode node);
