@@ -11,61 +11,40 @@ namespace Compiler.Interpret
 {
     public class ProgramVisitor : Visitor
     {
-        Dictionary<string, (PrimitiveType, object)> SymbolTable = new Dictionary<string, (PrimitiveType, object)>(); 
+        Dictionary<string, (PrimitiveType, object)> SymbolTable = new Dictionary<string, (PrimitiveType, object)>();
+        Dictionary<string, bool> ControlVariables = new Dictionary<string, bool>();
         
         public ProgramVisitor() {
         }
 
 
-        private void UpdateSymbol(string id, PrimitiveType type, object value)
+        private void UpdateSymbol(string id, PrimitiveType type, object value, bool control = false)
         {
-            if (value == null)
+            if (!control && ControlVariables.TryGetValueOrDefault(id))
             {
-                SymbolTable[id] = (type, null);
-                return;
+                throw new Exception($"cannot assign to control variable {id}");
             }
-
-            var val = ParseResult(type, value);
-            SymbolTable[id] = (type, val);
-            // switch (type)
-            // {
-            //     case PrimitiveType.Int:
-            //         SymbolTable[id] = (PrimitiveType.Int, int.Parse((string) value));
-            //         break;
-            //     case PrimitiveType.String:
-            //         SymbolTable[id] = (PrimitiveType.String, (string) value);
-            //         break;
-            //     case PrimitiveType.Bool:
-            //         SymbolTable[id] = (PrimitiveType.Bool, ((string) value).ToLower().Equals("true"));
-            //         break;
-            // }
+            SymbolTable[id] = (type, ParseResult(type, value));
         }
 
-        private void UpdateSymbol(string id, object value)
+        private void UpdateSymbol(string id, object value, bool control = false)
         {
-            UpdateSymbol(id, SymbolTable[id].Item1, value);
+            UpdateSymbol(id, SymbolTable.TryGetValueOrDefault(id).Item1, value, control);
+        }
+
+        private void UpdateControlVariable(string id, object value)
+        {
+            UpdateSymbol(id, value, true);
         }
         
-        // public override void Visit(NameNode node)
-        // {
-        //     return;
-        // }
-        //
-        // public override void Visit(ProgramNode node)
-        // {
-        //     Console.WriteLine("program");
-        //     node.Left.Accept(this);
-        // }
-
         public override object Visit(StatementNode node)
         {
-            Console.WriteLine("statement");
-            switch (node.Function)
+            switch (node.Token.KeywordType)
             {
-                case FunctionType.Print:
+                case KeywordType.Print:
                     Console.Write(node.Arguments[0].Accept(this));
                     break;
-                case FunctionType.Assert:
+                case KeywordType.Assert:
                     var result = (bool) node.Arguments[0].Accept(this);
                     if (result != true)
                     {
@@ -73,7 +52,7 @@ namespace Compiler.Interpret
                     }
 
                     break;
-                case FunctionType.Read:
+                case KeywordType.Read:
                 {
                     var value = Console.ReadLine();
                     var id = ((VariableNode) node.Arguments[0]).Token.Content;
@@ -90,7 +69,7 @@ namespace Compiler.Interpret
 
         public override object Visit(ForNode node)
         {
-            var id = node.Token;
+            var id = node.Token.Content;
             var rangeStart = node.RangeStart.Accept(this);
             var rangeEnd = node.RangeEnd.Accept(this);
             
@@ -99,17 +78,23 @@ namespace Compiler.Interpret
                 throw new Exception("invalid range");
             }
 
-            int i = 0;
-
-            do
+            if (!SymbolTable.ContainsKey(id))
             {
-                UpdateSymbol(id.Content, i);
+                throw new Exception($"control variable {id} not declared");
+            }
+            
+            UpdateSymbol(id, (int) rangeStart);
+            ControlVariables[id] = true;
+            int i = (int) rangeStart;
+            
+            while (i <= (int) rangeEnd)
+            {
                 node.Statements.Accept(this);
                 i++;
-            } while (i <= (int) rangeEnd + 1);
+                UpdateControlVariable(id, i);
+            };
+            ControlVariables[id] = false;
 
-            
-            Debug.WriteLine($"got to {SymbolTable[id.Content]}");
             return null;
         }
         
@@ -120,7 +105,6 @@ namespace Compiler.Interpret
         
         public override object Visit(StatementListNode node)
         {
-            Console.WriteLine("statementlist {0}", node);
             node.Left.Accept(this);
             node.Right.Accept(this);
             return null;
@@ -175,11 +159,11 @@ namespace Compiler.Interpret
 
         public override object Visit(AssignmentNode node)
         {
-            var id = node.Token.Content;
+            var id = node.Id.Token.Content;
             var value = node.Expression.Accept(this);
             var type = PrimitiveType.Void;
 
-            if (node.Declaration)
+            if (node.Token?.KeywordType == KeywordType.Var)
             {
                 if (SymbolTable.ContainsKey(id))
                 {
@@ -235,9 +219,7 @@ namespace Compiler.Interpret
         }
         public override object Visit(LiteralNode node)
         {
-            Console.WriteLine("literal {0}", node.Value);
-
-            return ParseResult(node.Type, node.Value);
+            return ParseResult(node.Type, node.Token.Content);
         }
 
         public override object Visit(VariableNode node)

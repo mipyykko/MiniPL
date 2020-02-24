@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Xml;
 using Compiler.Interpret;
+using static Compiler.Common.Util;
 
 namespace Compiler.Common.AST
 {
@@ -16,28 +18,13 @@ namespace Compiler.Common.AST
         }
 
         public abstract object Accept(Visitor visitor);
+
+        public virtual void AST(int depth = 0)
+        {
+            Console.WriteLine($"{Spaces(depth * 2)}{GetType()} {Token}");
+        }
     }
-
-
-    // public class EOFNode : Node
-    // {
-    //     public override PrimitiveType Type { get; }
-    //
-    //     public override void Accept(Visitor visitor) => visitor.Visit(this);
-    // }
-    //
-    // public class OperatorNode : Node
-    // {
-    //     public OperatorType Operator;
-    //
-    //     public OperatorNode()
-    //     {
-    //     }
-    //
-    //     public override PrimitiveType Type { get; }
-    //     public override void Accept(Visitor visitor) { visitor.Visit(this); }
-    // }
-
+    
     public abstract class OpNode : Node
     {
         public Token Op;
@@ -52,32 +39,14 @@ namespace Compiler.Common.AST
         }
         
         public override PrimitiveType Type { get; set; }
-        // {
-        //     get
-        //     {
-        //         switch (Op.Type)
-        //         {
-        //             case TokenType.Multiplication:
-        //             case TokenType.Division:
-        //             case TokenType.Subtraction:
-        //             case TokenType.Range:
-        //             case TokenType.Addition when Left.Type == Right.Type && Left.Type == PrimitiveType.Int: 
-        //                 return PrimitiveType.Int;
-        //             case TokenType.Addition when Left.Type == Right.Type && Left.Type == PrimitiveType.String:
-        //                 return PrimitiveType.String;
-        //             case TokenType.Addition:
-        //                 goto default;
-        //             case TokenType.And:
-        //             case TokenType.LessThan:
-        //             case TokenType.Equals: 
-        //                 return PrimitiveType.Bool;
-        //             default:
-        //                 throw new Exception("type error");
-        //         }
-        //     }
-        // }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override void AST(int depth = 0)
+        {
+            base.AST(depth);
+            Left.AST(depth + 1);
+            Right.AST(depth + 1);
+        }
     }
 
     public abstract class ExpressionNode : Node
@@ -96,13 +65,16 @@ namespace Compiler.Common.AST
         }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        
+        public override void AST(int depth = 0)
+        {
+            base.AST(depth);
+            Expression.AST(depth + 1);
+        }
     }
 
     
     public class StatementNode : Node
     {
-        public FunctionType Function;
         public List<Node> Arguments { get; set; }
 
         public StatementNode()
@@ -116,6 +88,14 @@ namespace Compiler.Common.AST
         }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override void AST(int depth = 0)
+        {
+            base.AST(depth);
+            foreach (var n in Arguments)
+            {
+                n.AST(depth + 1);
+            }
+        }
     }
 
     public class NoOpNode : Node
@@ -151,19 +131,9 @@ namespace Compiler.Common.AST
         public override object Accept(Visitor visitor) => visitor.Visit(this);
     }
     
-    // public class VarDeclarationNode : NameNode
-    // {
-    //     public PrimitiveType DeclaredType;
-    //     
-    //     public VarDeclarationNode()
-    //     {}
-    //
-    //     public override PrimitiveType Type => DeclaredType;
-    //     public override void Accept(Visitor visitor) { visitor.Visit(this); }
-    // }
     public class AssignmentNode : ExpressionNode
     {
-        public bool Declaration = false;
+        public Node Id;
         
         public AssignmentNode()
         {
@@ -171,6 +141,12 @@ namespace Compiler.Common.AST
         
         public override PrimitiveType Type { get; set; }
         public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override void AST(int depth = 0)
+        {
+            base.AST(depth);
+            Id.AST(depth + 1);
+            Expression.AST(depth + 1);
+        }
     }
 
     // public class ProgramNode : Node
@@ -201,6 +177,12 @@ namespace Compiler.Common.AST
         }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override void AST(int depth = 0)
+        {
+            base.AST(depth);
+            Left.AST(depth + 1);
+            Right.AST(depth + 1);
+        }
     }
 
     public class LiteralNode : Node
@@ -225,7 +207,13 @@ namespace Compiler.Common.AST
         public override PrimitiveType Type { get => PrimitiveType.Void; set => throw new Exception(""); }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        
+        public override void AST(int depth = 0)
+        {
+            base.AST(depth);
+            RangeStart.AST(depth + 1);
+            RangeEnd.AST(depth + 1);
+            Statements.AST(depth + 1);
+        }
     }
     // public class NameNode : Node
     // {

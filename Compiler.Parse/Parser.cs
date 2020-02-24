@@ -81,7 +81,11 @@ namespace Parse
         {
             NextToken();
 
-            StatementListNode tree = new StatementListNode();
+            StatementListNode tree = new StatementListNode
+            {
+                Left = new NoOpNode(),
+                Right = new NoOpNode()
+            };
             switch (TokenType)
             {
                 case TokenType.Keyword when !StatementFirstKeywords.Includes(TokenKeywordType):
@@ -159,7 +163,6 @@ namespace Parse
 
         public Node Statement()
         {
-            Node node;
             KeywordType[] expected =
             {
                 KeywordType.Var, KeywordType.For, KeywordType.Read, KeywordType.Print, KeywordType.Assert
@@ -224,7 +227,10 @@ namespace Parse
 
             return new AssignmentNode
             {
-                Token = id,
+                Id = new VariableNode
+                {
+                    Token = id
+                },
                 Expression = expr
             }; 
         }
@@ -239,7 +245,6 @@ namespace Parse
             return new StatementNode
             {
                 Token = token,
-                Function = FunctionType.Assert,
                 Arguments = new List<Node> { expr }
             };
         }
@@ -252,7 +257,6 @@ namespace Parse
             return new StatementNode
             {
                 Token = token,
-                Function = FunctionType.Print,
                 Arguments = new List<Node> { value }
             };
         }
@@ -266,7 +270,6 @@ namespace Parse
             return new StatementNode
             {
                 Token = token,
-                Function = FunctionType.Read,
                 Arguments = new List<Node> { new VariableNode
                     {
                         Token = id
@@ -298,18 +301,19 @@ namespace Parse
 
         public Node VarStatement()
         {
-            MatchKeywordType(KeywordType.Var);
-            // TODO: can do without declaration if we get this token in assignment
-            // and introduce variable as separate
+            var token = MatchKeywordType(KeywordType.Var);
             var id = MatchTokenType(TokenType.Identifier);
             MatchTokenType(TokenType.Colon);
             var type = Type();
             
             var n = new AssignmentNode
             {
-                Token = id,
+                Token = token,
+                Id = new VariableNode
+                {
+                    Token = id
+                },
                 Type = type,
-                Declaration = true
             };
             if (TokenType == TokenType.Separator)
             {
@@ -420,11 +424,11 @@ namespace Parse
                 case TokenType.StringValue:
                 case TokenType.BoolValue:
                 {
-                    var t = MatchTokenType(TokenType);
+                    var token = MatchTokenType(TokenType);
                     return new LiteralNode
                     {
-                        Value = t.Content,
-                        Type = TokenToPrimitiveType.TryGetValueOrDefault(t.Type)
+                        Token = token,
+                        Type = TokenToPrimitiveType.TryGetValueOrDefault(token.Type)
                     };
                 }
                 case TokenType.Identifier:

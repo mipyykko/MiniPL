@@ -14,6 +14,7 @@ namespace Compiler.Main
             var scanner = new Scanner(Text.Of(source));
             var parse = new Parser(scanner);
             Node tree = parse.Program();
+            tree.AST();
             new Interpreter(tree);
         }
     }

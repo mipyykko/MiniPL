@@ -36,5 +36,7 @@ namespace Compiler.Common
                     return PrimitiveType.Void;
             }
         }
+        
+        public static string Spaces(int n) => new string(' ', n); 
     }
 }
