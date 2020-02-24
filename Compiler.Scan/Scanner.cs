@@ -57,11 +57,6 @@ namespace Compiler.Scan
                     var numberContents = GetNumberContents(); // TODO: error check
                     return Token.Of(TokenType.IntValue, numberContents, GetSourceInfo(numberContents));
                 }
-                case TokenType.Operator when token.Equals("-") && Text.IsDigit(Current):
-                {
-                    var numberContents = $"-{GetNumberContents()}";
-                    return Token.Of(TokenType.IntValue, numberContents, GetSourceInfo(numberContents));
-                }
                 case TokenType.Quote:
                     var stringContents = GetStringContents(); // TODO: error check
                     return Token.Of(TokenType.StringValue, stringContents, GetSourceInfo(stringContents));

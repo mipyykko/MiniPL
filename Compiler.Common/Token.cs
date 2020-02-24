@@ -114,7 +114,7 @@ namespace Compiler.Common
             ["/"] = TokenType.Operator, // Division,
             ["&"] = TokenType.Operator, // And,
             // unary? how extensible would we want to be
-            ["!"] = TokenType.Not
+            ["!"] = TokenType.Operator
         };
 
         private static Dictionary<string, KeywordType> StringToKeywordType = new Dictionary<string, KeywordType>()

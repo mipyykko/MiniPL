@@ -358,7 +358,7 @@ namespace Parse
                 KeywordType.String,
                 KeywordType.Bool
             };
-            var tt = MatchKeywordTypeList(expectedTypes);
+            var tt = MatchKeywordType(expectedTypes);
 
             if (tt == null)
             {
@@ -386,29 +386,33 @@ namespace Parse
                         var op = Operator();
                         var opnd2 = Operand();
 
-                        return new BinaryNode
+                        return new ExpressionNode
                         {
-                            Left = opnd1,
-                            Op = op,
-                            Right = opnd2
+                            Expression = new BinaryNode {
+                                Left = opnd1,
+                                Op = op,
+                                Right = opnd2
+                            }
                         };
                     }
 
                     return opnd1;
                 }
-                case TokenType.Not:
+                case TokenType.Operator:
                 {
-                    MatchTokenType(TokenType.Not); // just eat it
-                    // var op = UnaryOperator(); // TODO: this is redundant
+                    var op = UnaryOperator();
                     var opnd = Operand();
 
-                    return new UnaryNode
+                    return new ExpressionNode
                     {
-                        Expression = opnd
+                        Expression = new UnaryNode {
+                            Op = op,
+                            Value = opnd
+                        }
                     };
                 }
                 default:
-                    UnexpectedTokenError(null);
+                    UnexpectedTokenError(null); // TODO
                     break;
             }
 
@@ -488,19 +492,18 @@ namespace Parse
         //     }
         // }
 
-        /*
-        public Node UnaryOperator() // TODO: this was a bit wonky 
+        public Token UnaryOperator() // TODO: this was a bit wonky 
         {
-            if (TokenType == TokenType.Not)
+            var t = MatchTokenType(TokenType.Operator);
+
+            if (!t.Content.Equals("!") && !t.Content.Equals("-"))
             {
-                MatchTokenType(TokenType.Not);
-                return Node.Of(NodeType.Not);
+                UnexpectedTokenError(t.Type); // TODO: not actually correct
+                return t;
             }
 
-            // TODO: needs to check if next one is a valid opnd follow
-            return Node.Of(NodeType.Unknown);
+            return t;
         }
-        */
 
         public Token MatchTokenType(TokenType tt)
         {
@@ -517,7 +520,7 @@ namespace Parse
             return matchedToken;
         }
 
-        public Token MatchOneOfTokenTypes(params TokenType[] tts)
+        public Token MatchTokenType(params TokenType[] tts)
         {
             foreach (var tt in tts)
                 if (TokenType == tt)
@@ -540,7 +543,7 @@ namespace Parse
             return null;
         }
 
-        public Token MatchKeywordTypeList(KeywordType[] kwtl)
+        public Token MatchKeywordType(KeywordType[] kwtl)
         {
             foreach (var kwt in kwtl)
                 if (TokenKeywordType == kwt)
@@ -555,10 +558,19 @@ namespace Parse
             return null;
         }
 
-        public void MatchContent(string s)
+        public bool MatchContent(string s)
         {
-            if (TokenContent.Equals(s)) return;
+            if (TokenContent.Equals(s)) return true;
             ParseError($"expected {s}");
+            return false;
+        }
+
+        public bool MatchContent(string[] sl)
+        {
+            foreach (var s in sl)
+                if (!MatchContent(s))
+                    return false;
+            return true;
         }
     }
 }

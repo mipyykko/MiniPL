@@ -122,6 +122,10 @@ namespace Compiler.Interpret
             ["!"] = OperatorType.Not
         };
 
+        public override object Visit(ExpressionNode node)
+        {
+            return node.Expression.Accept(this);
+        }
         public override object Visit(BinaryNode node)
         {   
             var opnd1 = node.Left.Accept(this);
@@ -154,7 +158,15 @@ namespace Compiler.Interpret
 
         public override object Visit(UnaryNode node)
         {
-            return node.Expression.Accept(this);
+            switch (node.Op.Content)
+            {
+                case "-":
+                    return -(int) node.Value.Accept(this);
+                case "!":
+                    return !(bool) node.Value.Accept(this);
+                default:
+                    throw new Exception($"invalid unary operator {node.Op.Content}");
+            }
         }
 
         public override object Visit(AssignmentNode node)

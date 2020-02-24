@@ -49,18 +49,28 @@ namespace Compiler.Common.AST
         }
     }
 
-    public abstract class ExpressionNode : Node
+    public class ExpressionNode : Node
     {
         public Node Expression;
+
+        public override PrimitiveType Type { get; set; }
+        public override object Accept(Visitor visitor) => visitor.Visit(this);
+
+        public override void AST(int depth = 0)
+        {
+            base.AST(depth);
+            Expression.AST(depth + 1);
+        }
     }
 
-    public class UnaryNode : ExpressionNode
+    public class UnaryNode : OpNode
     {
+        public new Node Value; // TODO
         public UnaryNode() {}
 
         public override PrimitiveType Type
         {
-            get => PrimitiveType.Bool;
+            get => Value.Type;
             set => Type = value;
         }
 
@@ -68,7 +78,7 @@ namespace Compiler.Common.AST
         public override void AST(int depth = 0)
         {
             base.AST(depth);
-            Expression.AST(depth + 1);
+            Value.AST(depth + 1);
         }
     }
 
