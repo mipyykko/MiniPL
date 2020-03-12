@@ -38,5 +38,6 @@ namespace Compiler.Common
         }
         
         public static string Spaces(int n) => new string(' ', n); 
+        
     }
 }

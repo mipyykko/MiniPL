@@ -8,7 +8,6 @@ namespace Compiler.Main
         {
             var test1 =
                 $@"var nTimes : int := 0;
-print z;
 // this is a line comment
 // and this 
     print ""How many times ?"";

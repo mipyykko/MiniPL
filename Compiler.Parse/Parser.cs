@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Compiler.Common;
 using Compiler.Common.AST;
@@ -16,11 +18,60 @@ namespace Parse
         // private Node tree;
         private bool DoBlock { get; set; } = false;
 
-        private KeywordType TokenKeywordType => InputToken.KeywordType;
-        private TokenType TokenType => InputToken.Type;
-        private string TokenContent => InputToken.Content;
+        private KeywordType InputTokenKeywordType => InputToken.KeywordType;
+        private TokenType InputTokenType => InputToken.Type;
+        private string InputTokenContent => InputToken.Content;
+        
+        public Parser(Scanner scanner)
+        {
+            this.scanner = scanner;
+        }
 
-        private readonly KeywordType[] StatementFirstKeywords =
+        private static void ParseError(string error)
+        {
+            Console.WriteLine(error);
+        }
+
+        private string GetLine => scanner.Text.Lines[InputToken.SourceInfo.LineRange.Line];
+
+        private string GetErrorPosition => new string(' ', Math.Max(0, InputToken.SourceInfo.LineRange.Start))
+                                           + new string('^', Math.Max(1, InputTokenContent.Length));
+
+        private void UnexpectedKeywordError(params KeywordType[] kwts)
+        {
+            var sb = new StringBuilder($"{GetLine}\n{GetErrorPosition}\n");
+            switch (kwts.Length)
+            {
+                case 0:
+                    sb.Append($"unexpected keyword {InputTokenContent} of type {InputTokenKeywordType}");
+                    break;
+                case 1:
+                    sb.Append($"expected keyword of type {kwts[0]}, got {InputTokenContent} of type {InputTokenKeywordType}");
+                    break;
+                default:
+                    sb.Append(
+                        $"expected one of keyword types {string.Join(", ", kwts)}, got {InputTokenContent} of type {InputTokenKeywordType}");
+                    break;
+            }
+
+            ParseError(sb.ToString());
+            SkipToTokenType(TokenType.Separator);
+        }
+
+        private void UnexpectedTokenError(TokenType? tt)
+        {
+            ParseError($"{GetLine}\n{GetErrorPosition}\nexpected token {tt}, got {InputTokenType}");
+            SkipToTokenType(TokenType.Separator);
+        }
+
+        public void TypeError(NodeType expected, NodeType got)
+        {
+            ParseError($"{GetLine}\n{GetErrorPosition}\nexpected value of type {expected}, got {got}");
+        }
+
+        private void NextToken() => InputToken = scanner.GetNextToken();
+
+        private static readonly KeywordType[] DefaultStatementFirstKeywords =
         {
             KeywordType.Var,
             KeywordType.For,
@@ -29,84 +80,35 @@ namespace Parse
             KeywordType.Assert
         };
 
-        public Parser(Scanner scanner)
-        {
-            this.scanner = scanner;
-        }
-
-
-        public void Parse()
-        {
-            Program();
-        }
-
-        public void ParseError(string error)
-        {
-            Console.WriteLine(error);
-        }
-
-        private string GetLine => scanner.Text.Lines[InputToken.SourceInfo.LineRange.Line];
-
-        private string GetErrorPosition => new string(' ', Math.Max(0, InputToken.SourceInfo.LineRange.Start))
-                                           + new string('^', Math.Max(0, TokenContent.Length));
-
-        public void UnexpectedKeywordError(params KeywordType[] kwts)
-        {
-            var sb = new StringBuilder($"{GetLine}\n{GetErrorPosition}\n");
-            if (kwts.Length == 0) sb.Append($"unexpected keyword {TokenContent} of type {TokenKeywordType}");
-            if (kwts.Length == 1)
-                sb.Append($"expected keyword of type {kwts[0]}, got {TokenContent} of type {TokenKeywordType}");
-            if (kwts.Length > 1)
-                sb.Append(
-                    $"expected one of keyword types {string.Join(", ", kwts)}, got {TokenContent} of type {TokenKeywordType}");
-            ParseError(sb.ToString());
-        }
-
-        public void UnexpectedTokenError(TokenType? tt)
-        {
-            ParseError($"{GetLine}\n{GetErrorPosition}\nexpected token {tt}, got {TokenType}");
-        }
-
-        public void TypeError(NodeType expected, NodeType got)
-        {
-            ParseError($"{GetLine}\n{GetErrorPosition}\nexpected value of type {expected}, got {got}");
-        }
-
-        public void NextToken()
-        {
-            InputToken = scanner.GetNextToken();
-        }
+        private static readonly KeywordType[] DoBlockStatementFirstKeywords =
+            DefaultStatementFirstKeywords.Concat(new[] {KeywordType.End}).ToArray();
+        
+        private KeywordType[] StatementFirstKeywords =>
+            DoBlock 
+                ? DoBlockStatementFirstKeywords 
+                : DefaultStatementFirstKeywords;
 
         public Node Program()
         {
             NextToken();
 
-            StatementListNode tree = new StatementListNode
+            var tree = new StatementListNode
             {
                 Left = new NoOpNode(),
                 Right = new NoOpNode()
             };
-            switch (TokenType)
+            switch (InputTokenType)
             {
-                case TokenType.Keyword when !StatementFirstKeywords.Includes(TokenKeywordType):
+                case TokenType.Keyword when !StatementFirstKeywords.Includes(InputTokenKeywordType):
                     UnexpectedKeywordError(StatementFirstKeywords);
                     break;
                 case TokenType.Keyword:
-                {
-                    var statements = StatementList();
-                    NextToken();
-                    MatchTokenType(TokenType.EOF);
-                    tree.Left = statements;
-                    // tree.AddChild(Node.Of(NodeType.EOF));
-                    break;
-                }
                 case TokenType.Identifier:
                 case TokenType.EOF:
                 {
                     var statements = StatementList();
                     MatchTokenType(TokenType.EOF);
                     tree.Left = statements;
-                    // tree.AddChild(Node.Of(NodeType.EOF));
                     break;
                 }
                 default:
@@ -119,59 +121,53 @@ namespace Parse
         }
 
 
-        public void SkipToTokenType(TokenType tt)
+        private void SkipToTokenType(TokenType tt)
         {
-            while (TokenType != tt && TokenType != TokenType.EOF) NextToken();
-            if (TokenType != TokenType.EOF) NextToken();
+            while (InputTokenType != tt && InputTokenType != TokenType.EOF) NextToken();
+            if (InputTokenType != TokenType.EOF) NextToken();
         }
 
-        public Node StatementList()
+        private Node StatementList()
         {
             var node = new StatementListNode();
 
-            switch (TokenType)
+            switch (InputTokenType)
             {
-                case TokenType.Keyword when DoBlock && TokenKeywordType == KeywordType.End:
+                case TokenType.Keyword when DoBlock && InputTokenKeywordType == KeywordType.End:
                 case TokenType.EOF: 
                     node.Left = new NoOpNode();
                     node.Right = new NoOpNode();
                     break;
-                case TokenType.Keyword when StatementFirstKeywords.Includes(TokenKeywordType):
-                    node.Left = Statement();
-                    MatchTokenType(TokenType.Separator);
-                    node.Right = StatementList();
-                    break;
-                case TokenType.Keyword:
-                    UnexpectedKeywordError(StatementFirstKeywords);
-                    SkipToTokenType(TokenType.Separator);
-                    node.Left = Statement();
-                    MatchTokenType(TokenType.Separator);
-                    node.Right = StatementList();
-                    break;
+                case TokenType.Keyword when StatementFirstKeywords.Includes(InputTokenKeywordType):
                 case TokenType.Identifier:
                     node.Left = Statement();
-                    MatchTokenType(TokenType.Separator);
+                    Separator();
                     node.Right = StatementList();
                     break;
                 default:
-                    UnexpectedTokenError(null);
+                    UnexpectedKeywordError(StatementFirstKeywords);
+                    node.Left = Statement();
+                    Separator();
+                    node.Right = StatementList();
                     break;
             }
 
             return node;
         }
 
-        public Node Statement()
+        private Token Separator() => MatchTokenType(TokenType.Separator);
+        
+        private Node Statement()
         {
             KeywordType[] expected =
             {
                 KeywordType.Var, KeywordType.For, KeywordType.Read, KeywordType.Print, KeywordType.Assert
             };
 
-            switch (TokenType)
+            switch (InputTokenType)
             {
                 case TokenType.Keyword:
-                    switch (TokenKeywordType)
+                    switch (InputTokenKeywordType)
                     {
                         case KeywordType.Var:
                             return VarStatement();
@@ -187,9 +183,7 @@ namespace Parse
                             break;
                         default:
                             UnexpectedKeywordError(expected);
-                            SkipToTokenType(TokenType.Separator);
-                            return null;
-                        // break;
+                            return null; // TODO: naughty
                     }
 
                     break;
@@ -200,8 +194,6 @@ namespace Parse
                     break;
             }
 
-            // MatchTokenType(TokenType.Separator);
-
             return null;
         }
 
@@ -209,11 +201,13 @@ namespace Parse
         {
             DoBlock = true;
 
-            MatchKeywordType(KeywordType.Do);
-            var statements = StatementList();
-            MatchKeywordType(KeywordType.End);
-            MatchKeywordType(expectedEnd); // ie. started with for, end with "end for";
-
+            var (_, statements, __, ___) = (
+                MatchKeywordType(KeywordType.Do),
+                StatementList(),
+                MatchKeywordType(KeywordType.End),
+                MatchKeywordType(expectedEnd) // ie. started with for, end with "end for";
+            );
+            
             DoBlock = false;
 
             return statements;
@@ -221,10 +215,12 @@ namespace Parse
 
         private Node AssignmentStatement()
         {
-            var id = MatchTokenType(TokenType.Identifier);
-            MatchTokenType(TokenType.Assignment);
-            var expr = Expression();
-
+            var (id, _, expr) = (
+                MatchTokenType(TokenType.Identifier),
+                MatchTokenType(TokenType.Assignment),
+                Expression()
+            );
+            
             return new AssignmentNode
             {
                 Id = new VariableNode
@@ -237,11 +233,12 @@ namespace Parse
 
         private Node AssertStatement()
         {
-            var token = MatchKeywordType(KeywordType.Assert);
-            MatchTokenType(TokenType.OpenParen);
-            var expr = Expression();
-            MatchTokenType(TokenType.CloseParen);
-
+            var (token, _, expr, __) = (
+                MatchKeywordType(KeywordType.Assert),
+                MatchTokenType(TokenType.OpenParen),
+                Expression(),
+                MatchTokenType(TokenType.CloseParen)
+            );
             return new StatementNode
             {
                 Token = token,
@@ -251,8 +248,10 @@ namespace Parse
 
         private Node PrintStatement()
         {
-            var token = MatchKeywordType(KeywordType.Print);
-            var value = Expression();
+            var (token, value) = (
+                MatchKeywordType(KeywordType.Print),
+                Expression()
+            );
 
             return new StatementNode
             {
@@ -263,10 +262,11 @@ namespace Parse
 
         private Node ReadStatement()
         {
-            var token = MatchKeywordType(KeywordType.Read);
-            var id = MatchTokenType(TokenType.Identifier);
+            var (token, id) = (
+                MatchKeywordType(KeywordType.Read),
+                MatchTokenType(TokenType.Identifier)
+            );
 
-            Console.WriteLine($"read with id {id.Content}");
             return new StatementNode
             {
                 Token = token,
@@ -280,15 +280,15 @@ namespace Parse
 
         private Node ForStatement()
         {
-            NextToken(); // TODO: match keyword, add variable in ForNode
-
-            var id = MatchTokenType(TokenType.Identifier);
-            MatchKeywordType(KeywordType.In);
-            var rangeStart = Expression();
-            MatchTokenType(TokenType.Range);
-            var rangeEnd = Expression();
-
-            var statements = DoEndBlock(KeywordType.For);
+            var (_, id, __, rangeStart, ___, rangeEnd, statements) = (
+                MatchKeywordType(KeywordType.For),
+                MatchTokenType(TokenType.Identifier),
+                MatchKeywordType(KeywordType.In),
+                Expression(),
+                MatchTokenType(TokenType.Range),
+                Expression(),
+                DoEndBlock(KeywordType.For)
+            );
 
             return new ForNode
             {
@@ -299,13 +299,15 @@ namespace Parse
             };
         }
 
-        public Node VarStatement()
+        private Node VarStatement()
         {
-            var token = MatchKeywordType(KeywordType.Var);
-            var id = MatchTokenType(TokenType.Identifier);
-            MatchTokenType(TokenType.Colon);
-            var type = Type();
-            
+            var (token, id, _, type) = (
+              MatchKeywordType(KeywordType.Var),
+              MatchTokenType(TokenType.Identifier),
+              MatchTokenType(TokenType.Colon),
+              Type()
+            );
+
             var n = new AssignmentNode
             {
                 Token = token,
@@ -315,42 +317,22 @@ namespace Parse
                 },
                 Type = type,
             };
-            if (TokenType == TokenType.Separator)
+            if (InputTokenType == TokenType.Separator)
             {
                 n.Expression = new NoOpNode();
                 return n;
             }
 
-            MatchTokenType(TokenType.Assignment);
-            var value = Expression();
-
-            // CheckType(value, type.Type);
+            var (_, value) = (
+                MatchTokenType(TokenType.Assignment),
+                Expression()
+            );
 
             n.Expression = value;
             return n;
         }
 
-        // public void CheckType(Node n, NodeType nt)
-        // {
-        //     switch (n.Type)
-        //     {
-        //         case NodeType.ValueExpression:
-        //             CheckType(n.Children[0], nt);
-        //             break;
-        //         case NodeType.BinaryExpression:
-        //             CheckType(n.Children[0], nt);
-        //             CheckType(n.Children[2], nt);
-        //             break;
-        //         case NodeType.UnaryExpression:
-        //             CheckType(n.Children[1], nt);
-        //             break;
-        //         default:
-        //             if (n.Type != Node.TypeToValue.TryGetValueOrDefault(nt)) TypeError(nt, n.Type);
-        //             break;
-        //     }
-        // }
-
-        public PrimitiveType Type()
+        private PrimitiveType Type()
         {
             KeywordType[] expectedTypes =
             {
@@ -360,19 +342,15 @@ namespace Parse
             };
             var tt = MatchKeywordType(expectedTypes);
 
-            if (tt == null)
-            {
-                UnexpectedKeywordError(expectedTypes);
-                return PrimitiveType.Void;
-            }
-
-            // anytype should never happen after ^
-            return tt.KeywordType.ToPrimitiveType();
+            if (tt != null) return tt.KeywordType.ToPrimitiveType();
+            
+            UnexpectedKeywordError(expectedTypes);
+            return PrimitiveType.Void;
         }
 
-        public Node Expression()
+        private Node Expression()
         {
-            switch (TokenType)
+            switch (InputTokenType)
             {
                 case TokenType.IntValue:
                 case TokenType.StringValue:
@@ -381,7 +359,7 @@ namespace Parse
                 case TokenType.OpenParen:
                 {
                     var opnd1 = Operand();
-                    if (TokenType == TokenType.Operator)
+                    if (InputTokenType == TokenType.Operator)
                     {
                         var op = Operator();
                         var opnd2 = Operand();
@@ -420,15 +398,15 @@ namespace Parse
             // return Node.Of(NodeType.Unknown);
         }
 
-        public Node Operand()
+        private Node Operand()
         {
-            switch (TokenType)
+            switch (InputTokenType)
             {
                 case TokenType.IntValue:
                 case TokenType.StringValue:
                 case TokenType.BoolValue:
                 {
-                    var token = MatchTokenType(TokenType);
+                    var token = MatchTokenType(InputTokenType);
                     return new LiteralNode
                     {
                         Token = token,
@@ -437,19 +415,21 @@ namespace Parse
                 }
                 case TokenType.Identifier:
                 {
-                    var t = MatchTokenType(TokenType);
+                    var t = MatchTokenType(InputTokenType);
                     return new VariableNode
                     {
                         Token = t
                     };
                 }
                 case TokenType.OpenParen:
-                    MatchTokenType(TokenType.OpenParen);
-                    var n = Expression();
-                    MatchTokenType(TokenType.CloseParen);
+                    var (_, n, __) = (
+                        MatchTokenType(TokenType.OpenParen),
+                        Expression(),
+                        MatchTokenType(TokenType.CloseParen)
+                    );
                     return n;
                 default:
-                    UnexpectedTokenError(null);
+                    UnexpectedTokenError(null); // TODO
                     break;
             }
 
@@ -463,52 +443,23 @@ namespace Parse
             [TokenType.BoolValue] = PrimitiveType.Bool,
         };
 
-        public Token Operator()
+        private Token Operator() => MatchTokenType(TokenType.Operator);
+        
+        private Token UnaryOperator() // TODO: this was a bit wonky 
         {
             var t = MatchTokenType(TokenType.Operator);
 
-            if (t.Type == TokenType.Unknown) UnexpectedTokenError(null);
+            if (t.Content.Equals("!") || t.Content.Equals("-")) return t;
 
+            UnexpectedTokenError(t.Type); // TODO: not actually correct
             return t;
+
         }
 
-        // public Node ValueOrIdentifier(TokenType tt)
-        // {
-        //     var t = MatchTokenType(tt);
-        //
-        //     switch (tt)
-        //     {
-        //         case TokenType.Identifier:
-        //             return new IdentifierNode
-        //             {
-        //                 Name = t.Content
-        //             };
-        //         default:
-        //             return new LiteralNode
-        //             {
-        //                 Value = t.Content,
-        //                 ValueType = TokenToPrimitiveType.TryGetValueOrDefault(tt, PrimitiveType.Unknown)
-        //             };
-        //     }
-        // }
-
-        public Token UnaryOperator() // TODO: this was a bit wonky 
-        {
-            var t = MatchTokenType(TokenType.Operator);
-
-            if (!t.Content.Equals("!") && !t.Content.Equals("-"))
-            {
-                UnexpectedTokenError(t.Type); // TODO: not actually correct
-                return t;
-            }
-
-            return t;
-        }
-
-        public Token MatchTokenType(TokenType tt)
+        private Token MatchTokenType(TokenType tt)
         {
             var matchedToken = InputToken;
-            if (TokenType == tt)
+            if (InputTokenType == tt)
             {
                 NextToken();
                 Console.WriteLine("matched token {0}", tt);
@@ -516,22 +467,22 @@ namespace Parse
             }
 
             UnexpectedTokenError(tt);
-            NextToken();
+            //NextToken();
             return matchedToken;
         }
 
         public Token MatchTokenType(params TokenType[] tts)
         {
             foreach (var tt in tts)
-                if (TokenType == tt)
+                if (InputTokenType == tt)
                     return MatchTokenType(tt);
             UnexpectedTokenError(null); // TODO: one of
             return null;
         }
 
-        public Token MatchKeywordType(KeywordType kwt)
+        private Token MatchKeywordType(KeywordType kwt)
         {
-            if (TokenKeywordType == kwt)
+            if (InputTokenKeywordType == kwt)
             {
                 var matchedToken = InputToken;
                 NextToken();
@@ -543,10 +494,10 @@ namespace Parse
             return null;
         }
 
-        public Token MatchKeywordType(KeywordType[] kwtl)
+        private Token MatchKeywordType(KeywordType[] kwtl)
         {
             foreach (var kwt in kwtl)
-                if (TokenKeywordType == kwt)
+                if (InputTokenKeywordType == kwt)
                 {
                     var matchedToken = InputToken;
                     NextToken();
@@ -558,9 +509,9 @@ namespace Parse
             return null;
         }
 
-        public bool MatchContent(string s)
+        private bool MatchContent(string s)
         {
-            if (TokenContent.Equals(s)) return true;
+            if (InputTokenContent.Equals(s)) return true;
             ParseError($"expected {s}");
             return false;
         }
