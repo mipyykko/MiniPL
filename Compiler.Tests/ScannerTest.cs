@@ -1,6 +1,8 @@
-﻿using FluentAssertions;
+﻿using System;
+using FluentAssertions;
 using NUnit.Framework;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using Compiler.Common;
 using Compiler.Scan;
@@ -40,18 +42,18 @@ namespace Compiler.Tests
         }
 
         [Test()]
-        public void SimpleCase()
+        public void Whitespace()
         {
-            var program1 = "var a : int := 0;";
+            var program1 = "var a        :\n\n\n\n\nint    :=0;";
             var expected =
                 $@"Keyword (0, 2) (0, 0, 2) Var ""var""
 Identifier (4, 4) (0, 4, 4) Unknown ""a""
-Colon (6, 6) (0, 6, 6) Unknown "":""
-Keyword (8, 10) (0, 8, 10) Int ""int""
-Assignment (12, 13) (0, 12, 13) Unknown "":=""
-IntValue (15, 15) (0, 15, 15) Unknown ""0""
-Separator (16, 16) (0, 16, 16) Unknown "";""
-EOF (16, 17) (0, 16, 17) Unknown """"";
+Colon (13, 13) (0, 13, 13) Unknown "":""
+Keyword (19, 21) (5, 0, 2) Int ""int""
+Assignment (26, 27) (5, 7, 8) Unknown "":=""
+IntValue (28, 28) (5, 9, 9) Unknown ""0""
+Separator (29, 29) (5, 10, 10) Unknown "";""
+EOF (29, 29) (5, 10, 10) Unknown """"";
 
             AssertProgramTokens(program1, expected);
         }
@@ -60,15 +62,19 @@ EOF (16, 17) (0, 16, 17) Unknown """"";
         public void Comments()
         {
             var program2 =
-                "// print \"commented out\";\nprint \"not commented\";/* line change\n in comment\n*/\nprint \"a/* not comment */ // b\";";
+                "// print \"commented out\";\n" + 
+                "print \"not commented\";/* line change\n"+
+                "in comment\n"+
+                "*/\n"+
+                "print \"a/* not a comment inside literal */ // b\";";
             var expected =
-                $@"Keyword (26, 30) (2, 0, 4) Print ""print""
-StringValue (32, 46) (2, 6, 20) Unknown ""not commented""
-Separator (47, 47) (2, 21, 21) Unknown "";""
-Keyword (78, 82) (6, 0, 4) Print ""print""
-StringValue (84, 108) (6, 6, 30) Unknown ""a/* not comment */ // b""
-Separator (109, 109) (6, 31, 31) Unknown "";""
-EOF (109, 110) (6, 31, 32) Unknown """"";
+                $@"Keyword (26, 30) (1, 0, 4) Print ""print""
+StringValue (32, 44) (1, 6, 18) Unknown ""not commented""
+Separator (47, 47) (1, 21, 21) Unknown "";""
+Keyword (77, 81) (4, 0, 4) Print ""print""
+StringValue (83, 122) (4, 6, 45) Unknown ""a/* not a comment inside literal */ // b""
+Separator (125, 125) (4, 48, 48) Unknown "";""
+EOF (125, 125) (4, 48, 48) Unknown """"";
 
             AssertProgramTokens(program2, expected);
         }

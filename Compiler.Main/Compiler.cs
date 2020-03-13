@@ -1,4 +1,6 @@
 ﻿using System;
+using Compiler.Common.AST;
+using Compiler.Interpret;
 using Compiler.Scan;
 using Text = Compiler.Common.Text;
 using Parse;
@@ -11,7 +13,9 @@ namespace Compiler.Main
         {
             var scanner = new Scanner(Text.Of(source));
             var parse = new Parser(scanner);
-            parse.Program();
+            Node tree = parse.Program();
+            tree.AST();
+            new Interpreter(tree);
         }
     }
 }

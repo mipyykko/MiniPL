@@ -46,7 +46,13 @@ namespace Compiler.Common
         Int,
         String,
         Bool,
-        Assert
+        Assert,
+        True,
+        False
+    }
+
+    static class KeywordTypeMethods
+    {
     }
 
     public class Token
@@ -108,7 +114,7 @@ namespace Compiler.Common
             ["/"] = TokenType.Operator, // Division,
             ["&"] = TokenType.Operator, // And,
             // unary? how extensible would we want to be
-            ["!"] = TokenType.Not
+            ["!"] = TokenType.Operator
         };
 
         private static Dictionary<string, KeywordType> StringToKeywordType = new Dictionary<string, KeywordType>()
@@ -123,7 +129,9 @@ namespace Compiler.Common
             ["int"] = KeywordType.Int,
             ["string"] = KeywordType.String,
             ["bool"] = KeywordType.Bool,
-            ["assert"] = KeywordType.Assert
+            ["assert"] = KeywordType.Assert,
+            ["true"] = KeywordType.True,
+            ["false"] = KeywordType.False
         };
 
         public static KeywordType GetKeywordType(string s)

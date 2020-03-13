@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 
 namespace Compiler.Common
 {
@@ -73,33 +74,33 @@ namespace Compiler.Common
         {
             SkipSpaces();
             var done = false;
+
             while (!done && !IsExhausted)
             {
                 done = true;
-                // line comment, skip this line and continue loop
-                if (NextTwo == "//")
+                switch (NextTwo)
                 {
-                    SkipLine();
-                    done = false;
-                    continue;
-                }
-
-                // block comment, advance until end marker or EOF
-                if (NextTwo == "/*")
-                {
-                    Advance(2);
-                    while (!IsExhausted && NextTwo != "*/")
-                    {
+                    // line comment, skip this line and continue loop
+                    case "//":
+                        SkipLine();
                         done = false;
-                        Advance();
-                        if (IsExhausted)
+                        continue;
+                    // block comment, advance until end marker or EOF
+                    case "/*":
+                    {
+                        Advance(2);
+                        while (!IsExhausted && NextTwo != "*/")
                         {
-                            done = true;
-                            break;
-                        }
-                    }
+                            done = false;
+                            Advance();
+                            if (!IsExhausted) continue;
 
-                    Advance(2);
+                            throw new SyntaxErrorException("runaway comment");
+                        }
+
+                        Advance(2);
+                        break;
+                    }
                 }
 
                 SkipSpaces();
