@@ -90,12 +90,6 @@ namespace Compiler.Common
             return $"{Type} {SourceInfo.SourceRange} {SourceInfo.LineRange} {KeywordType} \"{Content}\"";
         }
 
-        public string ToOfString()
-        {
-            return $"Node.Of(TokenType.{Type}, KeywordType.{KeywordType}, " +
-                   $"\"{Content}\", SourceInfo.Of({SourceInfo.SourceRange}, {SourceInfo.LineRange}))";
-        }
-
         public static Dictionary<string, TokenType> TrivialTokenTypes = new Dictionary<string, TokenType>()
         {
             [":="] = TokenType.Assignment,

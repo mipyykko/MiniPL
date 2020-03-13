@@ -29,7 +29,7 @@ comment */
                 "a :=16664  + 2*( 3+6)/4  \n; var b : string := \"asdf\";// should be commented\n/* a := 1; \n asdf */";
 
             var test3 = $@"print ""Give a number"";
-var n n : int;
+var n : int;
 read n;
 var v : int := 1;
 var i : int;

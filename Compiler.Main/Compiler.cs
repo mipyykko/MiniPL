@@ -11,11 +11,19 @@ namespace Compiler.Main
     {
         public Compiler(string source)
         {
-            var scanner = new Scanner(Text.Of(source));
-            var parse = new Parser(scanner);
-            Node tree = parse.Program();
+            var sourceText = Text.Of(source);
+            var scanner = new Scanner(sourceText);
+            var parser = new Parser(scanner);
+            var tree = parser.Program();
             tree.AST();
-            new Interpreter(tree);
+            if (parser.Errors.Count > 0)
+            {
+                foreach (var error in parser.Errors)
+                {
+                    Console.WriteLine(error);
+                }
+            }
+            new Interpreter(tree, sourceText);
         }
     }
 }

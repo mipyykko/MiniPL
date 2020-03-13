@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using Compiler.Common;
 using Compiler.Common.AST;
 using Node = Compiler.Common.AST.Node;
@@ -11,32 +9,33 @@ namespace Compiler.Interpret
 {
     public class ProgramVisitor : Visitor
     {
+        private Text _source;
+
+        public ProgramVisitor(Text source) => _source = source;
+        
         Dictionary<string, (PrimitiveType, object)> SymbolTable = new Dictionary<string, (PrimitiveType, object)>();
         Dictionary<string, bool> ControlVariables = new Dictionary<string, bool>();
+        
 
-        public ProgramVisitor()
-        {
-        }
-
-
-        private void UpdateSymbol(string id, PrimitiveType type, object value, bool control = false)
+        private ErrorType UpdateSymbol(string id, PrimitiveType type, object value, bool control = false)
         {
             if (!control && ControlVariables.TryGetValueOrDefault(id))
             {
-                throw new Exception($"cannot assign to control variable {id}");
+                return ErrorType.AssignmentToControlVariable;
             }
 
             SymbolTable[id] = (type, ParseResult(type, value));
+            return ErrorType.Unknown;
         }
 
-        private void UpdateSymbol(string id, object value, bool control = false)
+        private ErrorType UpdateSymbol(string id, object value, bool control = false)
         {
-            UpdateSymbol(id, SymbolTable.TryGetValueOrDefault(id).Item1, value, control);
+            return UpdateSymbol(id, SymbolTable.TryGetValueOrDefault(id).Item1, value, control);
         }
 
-        private void UpdateControlVariable(string id, object value)
+        private ErrorType UpdateControlVariable(string id, object value)
         {
-            UpdateSymbol(id, value, true);
+            return UpdateSymbol(id, value, true);
         }
 
         public override object Visit(StatementNode node)
@@ -74,18 +73,29 @@ namespace Compiler.Interpret
             var id = node.Token.Content;
             var rangeStart = node.RangeStart.Accept(this);
             var rangeEnd = node.RangeEnd.Accept(this);
-
+            var error = ErrorType.Unknown;
+            
             if (!(rangeStart is int) || !(rangeEnd is int))
             {
-                throw new Exception("invalid range");
+                ThrowError(ErrorType.InvalidRange,
+                    node,
+                    $"invalid range {rangeStart}..{rangeEnd}");
             }
 
             if (!SymbolTable.ContainsKey(id))
             {
-                throw new Exception($"control variable {id} not declared");
+                ThrowError(ErrorType.UndeclaredVariable,
+                    node,
+                    $"control variable {id} not declared");
             }
 
-            UpdateSymbol(id, (int) rangeStart);
+            error = UpdateSymbol(id, (int) rangeStart);
+            if (error != ErrorType.Unknown)
+            {
+                ThrowError(error,
+                    node,
+                    $"unable to assign to control variable {id}");
+            }
             ControlVariables[id] = true;
             var i = (int) rangeStart;
 
@@ -93,7 +103,13 @@ namespace Compiler.Interpret
             {
                 node.Statements.Accept(this);
                 i++;
-                UpdateControlVariable(id, i);
+                error = UpdateControlVariable(id, i);
+                if (error != ErrorType.Unknown)
+                {
+                    ThrowError(error,
+                        node,
+                        $"unable to assign to control variable {id}");
+                }
             }
 
             ;
@@ -144,7 +160,10 @@ namespace Compiler.Interpret
                 case OperatorType.Addition when opnd1 is string o1 && opnd2 is string o2:
                     return o1 + o2;
                 case OperatorType.Addition:
-                    throw new Exception("invalid operation"); // TODO: generalize
+                    ThrowError(ErrorType.InvalidOperation,
+                        node,
+                        $"invalid operation ${op}");
+                    break;
                 case OperatorType.Subtraction:
                     return (int) opnd1 - (int) opnd2;
                 case OperatorType.Multiplication:
@@ -168,7 +187,9 @@ namespace Compiler.Interpret
             {
                 "-" => (object) -(int) node.Value.Accept(this),
                 "!" => !(bool) node.Value.Accept(this),
-                _ => throw new Exception($"invalid unary operator {node.Token.Content}")
+                _ => ThrowError(ErrorType.InvalidOperation,
+                        node,
+                        $"invalid unary operator {node.Token.Content}")
             };
         }
 
@@ -182,7 +203,9 @@ namespace Compiler.Interpret
             {
                 if (SymbolTable.ContainsKey(id))
                 {
-                    throw new Exception($"variable {id} already defined");
+                    ThrowError(ErrorType.RedeclaredVariable,
+                        node,
+                        $"variable {id} already defined");
                 }
 
                 type = node.Type;
@@ -191,7 +214,9 @@ namespace Compiler.Interpret
             {
                 if (!SymbolTable.ContainsKey(id))
                 {
-                    throw new Exception($"variable {id} not declared");
+                    ThrowError(ErrorType.UndeclaredVariable,
+                        node,
+                        $"variable {id} not declared");
                 }
 
                 type = SymbolTable[id].Item1;
@@ -203,21 +228,19 @@ namespace Compiler.Interpret
             return value;
         }
 
-        // public override void Visit(VarDeclarationNode node)
-        // {
-        //     var id = node.Name;
-        //     var type = node.DeclaredType;
-        //     node.Value.Accept(this);
-        //     var value = LatestResult;
-        //
-        //     if (SymbolTable.ContainsKey(id))
-        //     {
-        //         throw new Exception($"variable {id} already defined");
-        //     }
-        //     
-        //     SymbolTable.Add(id, (type, value));
-        //     Console.WriteLine($"assigned {id} {type} {value}");
-        // }
+        private object ThrowError(ErrorType type, Node node, string message)
+        {
+            var errorLine = node.Token.SourceInfo.LineRange.Line;
+            Console.WriteLine($"\nError: {message} on line {errorLine}:");
+            for (var i = Math.Max(0, errorLine - 2); i < Math.Min(_source.Lines.Count, errorLine + 3); i++)
+            {
+                Console.WriteLine($"{i}: {_source.Lines[i]}");
+                
+            }
+            Environment.Exit(1);
+
+            return null; // we'll never get here, but anyway
+        }
 
         public object ParseResult(PrimitiveType type, object value) =>
             type switch
@@ -238,16 +261,19 @@ namespace Compiler.Interpret
             var name = node.Token.Content;
             if (!SymbolTable.ContainsKey(name))
             {
-                throw new Exception($"{name} not declared");
+                ThrowError(ErrorType.UndeclaredVariable,
+                    node,
+                    $"{name} not declared");
             }
 
             var ( _,  value) = SymbolTable[name];
             return value;
         }
 
-        // public override void Visit(EOFNode node)
+        // public override object Visit(ErrorNode node)
         // {
-        //     Console.WriteLine("done");
+        //     Console.WriteLine("I am in errornode visitor?");
+        //     return null; 
         // }
     }
 }

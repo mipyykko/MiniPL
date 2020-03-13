@@ -176,16 +176,17 @@ namespace Compiler.Common.AST
         }
     }
 
-    // public class ProgramNode : Node
+    // public class ErrorNode : Node
     // {
-    //     public Node Left;
+    //     public override string Name => "Error";
+    //     public ErrorType Error;
+    //     public override PrimitiveType Type { get; set; }
+    //     public override object Accept(Visitor visitor) => visitor.Visit(this);
     //
-    //     public ProgramNode()
+    //     public override void AST(int depth = 0, string caller = "")
     //     {
+    //         Console.WriteLine($"{Spaces(depth * 2)}[{Error} {Token}]");
     //     }
-    //
-    //     public override PrimitiveType Type => PrimitiveType.Void;
-    //     public override void Accept(Visitor visitor) { visitor.Visit(this); }
     // }
 
     public class StatementListNode : Node
