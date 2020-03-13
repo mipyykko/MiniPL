@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Compiler.Common;
 using Compiler.Common.AST;
 using Compiler.Scan;
-using NodeType = Compiler.Common.Node.NodeType;
 using Node = Compiler.Common.AST.Node;
 
 namespace Parse
@@ -14,22 +13,33 @@ namespace Parse
     public class Parser
     {
         private readonly Scanner scanner;
+
         private Token InputToken;
+
         // private Node tree;
         private bool DoBlock { get; set; } = false;
 
         private KeywordType InputTokenKeywordType => InputToken.KeywordType;
         private TokenType InputTokenType => InputToken.Type;
         private string InputTokenContent => InputToken.Content;
-        
+
+        private static readonly Node NoOpStatement = new NoOpNode();
+
         public Parser(Scanner scanner)
         {
+            /* TODO:
+               get rid of those tuple things, or find some other thing
+               to get ut of that statement function after some of the parts
+               fails - now it leads to cascading errors
+            */
             this.scanner = scanner;
         }
 
         private static void ParseError(string error)
         {
             Console.WriteLine(error);
+            throw new SyntaxErrorException(error);
+            // Console.WriteLine(error);
         }
 
         private string GetLine => scanner.Text.Lines[InputToken.SourceInfo.LineRange.Line];
@@ -40,33 +50,33 @@ namespace Parse
         private void UnexpectedKeywordError(params KeywordType[] kwts)
         {
             var sb = new StringBuilder($"{GetLine}\n{GetErrorPosition}\n");
-            switch (kwts.Length)
-            {
-                case 0:
-                    sb.Append($"unexpected keyword {InputTokenContent} of type {InputTokenKeywordType}");
-                    break;
-                case 1:
-                    sb.Append($"expected keyword of type {kwts[0]}, got {InputTokenContent} of type {InputTokenKeywordType}");
-                    break;
-                default:
-                    sb.Append(
-                        $"expected one of keyword types {string.Join(", ", kwts)}, got {InputTokenContent} of type {InputTokenKeywordType}");
-                    break;
-            }
-
+            sb.Append(
+                kwts.Length switch
+                {
+                    0 => $"unexpected keyword {InputTokenContent} of type {InputTokenKeywordType}",
+                    1 => $"expected keyword of type {kwts[0]}, got {InputTokenContent} of type {InputTokenKeywordType}",
+                    _ =>
+                    $"expected one of keyword types {string.Join(", ", kwts)}, got {InputTokenContent} of type {InputTokenKeywordType}"
+                }
+            );
+            SkipToTokenType(TokenType.Separator);
             ParseError(sb.ToString());
-            SkipToTokenType(TokenType.Separator);
         }
 
-        private void UnexpectedTokenError(TokenType? tt)
+        private void UnexpectedTokenError(params TokenType[] tts)
         {
-            ParseError($"{GetLine}\n{GetErrorPosition}\nexpected token {tt}, got {InputTokenType}");
+            var sb = new StringBuilder($"{GetLine}\n{GetErrorPosition}\n");
+            sb.Append(
+                tts.Length switch
+                {
+                    0 => $"unexpected token {InputTokenContent} of type {InputTokenType}",
+                    1 => $"expected token of type {tts[0]}, got {InputTokenContent} of type {InputTokenType}",
+                    _ =>
+                    $"expected one of token types {string.Join(", ", tts)}, got {InputTokenContent} of type {InputTokenType}"
+                }
+            );
             SkipToTokenType(TokenType.Separator);
-        }
-
-        public void TypeError(NodeType expected, NodeType got)
-        {
-            ParseError($"{GetLine}\n{GetErrorPosition}\nexpected value of type {expected}, got {got}");
+            ParseError(sb.ToString());
         }
 
         private void NextToken() => InputToken = scanner.GetNextToken();
@@ -82,42 +92,25 @@ namespace Parse
 
         private static readonly KeywordType[] DoBlockStatementFirstKeywords =
             DefaultStatementFirstKeywords.Concat(new[] {KeywordType.End}).ToArray();
-        
+
         private KeywordType[] StatementFirstKeywords =>
-            DoBlock 
-                ? DoBlockStatementFirstKeywords 
+            DoBlock
+                ? DoBlockStatementFirstKeywords
                 : DefaultStatementFirstKeywords;
 
         public Node Program()
         {
             NextToken();
 
-            var tree = new StatementListNode
+            var (statements, _) = (
+                StatementList(),
+                MatchTokenType(TokenType.EOF)
+            );
+            return new StatementListNode
             {
-                Left = new NoOpNode(),
+                Left = statements,
                 Right = new NoOpNode()
             };
-            switch (InputTokenType)
-            {
-                case TokenType.Keyword when !StatementFirstKeywords.Includes(InputTokenKeywordType):
-                    UnexpectedKeywordError(StatementFirstKeywords);
-                    break;
-                case TokenType.Keyword:
-                case TokenType.Identifier:
-                case TokenType.EOF:
-                {
-                    var statements = StatementList();
-                    MatchTokenType(TokenType.EOF);
-                    tree.Left = statements;
-                    break;
-                }
-                default:
-                    UnexpectedTokenError(null);
-                    break;
-            }
-
-            return tree;
-            // Node.PrintTree(tree);
         }
 
 
@@ -129,72 +122,90 @@ namespace Parse
 
         private Node StatementList()
         {
-            var node = new StatementListNode();
-
-            switch (InputTokenType)
+            try
             {
-                case TokenType.Keyword when DoBlock && InputTokenKeywordType == KeywordType.End:
-                case TokenType.EOF: 
-                    node.Left = new NoOpNode();
-                    node.Right = new NoOpNode();
-                    break;
-                case TokenType.Keyword when StatementFirstKeywords.Includes(InputTokenKeywordType):
-                case TokenType.Identifier:
-                    node.Left = Statement();
-                    Separator();
-                    node.Right = StatementList();
-                    break;
-                default:
-                    UnexpectedKeywordError(StatementFirstKeywords);
-                    node.Left = Statement();
-                    Separator();
-                    node.Right = StatementList();
-                    break;
+                switch (InputTokenType)
+                {
+                    case TokenType.Keyword when DoBlock && InputTokenKeywordType == KeywordType.End:
+                    case TokenType.EOF:
+                        return NoOpStatement;
+                    case TokenType.Keyword when StatementFirstKeywords.Includes(InputTokenKeywordType):
+                    case TokenType.Identifier:
+                        return StatementStatementList();
+                    default:
+                    {
+                        UnexpectedKeywordError(StatementFirstKeywords);
+                        return StatementStatementList();
+                    }
+                }
             }
+            catch (Exception)
+            {
+                return StatementStatementList();
+            }
+        }
 
-            return node;
+        private Node StatementStatementList()
+        {
+            var (left, _, right) = (
+                Statement(),
+                Separator(),
+                StatementList()
+            );
+            return new StatementListNode
+            {
+                Left = left,
+                Right = right
+            };
         }
 
         private Token Separator() => MatchTokenType(TokenType.Separator);
-        
+
+        private TokenType[] StatementFirstTokens = new[]
+        {
+            TokenType.Keyword,
+            TokenType.Identifier
+        };
+
         private Node Statement()
         {
-            KeywordType[] expected =
+            try
             {
-                KeywordType.Var, KeywordType.For, KeywordType.Read, KeywordType.Print, KeywordType.Assert
-            };
-
-            switch (InputTokenType)
-            {
-                case TokenType.Keyword:
-                    switch (InputTokenKeywordType)
+                switch (InputTokenType)
+                {
+                    case TokenType.Keyword:
                     {
-                        case KeywordType.Var:
-                            return VarStatement();
-                        case KeywordType.For:
-                            return ForStatement();
-                        case KeywordType.Read:
-                            return ReadStatement();
-                        case KeywordType.Print:
-                            return PrintStatement();
-                        case KeywordType.Assert:
-                            return AssertStatement();
-                        case KeywordType.End when DoBlock:
-                            break;
-                        default:
-                            UnexpectedKeywordError(expected);
-                            return null; // TODO: naughty
+                        var statement = InputTokenKeywordType switch
+                        {
+                            KeywordType.Var => VarStatement(),
+                            KeywordType.For => ForStatement(),
+                            KeywordType.Read => ReadStatement(),
+                            KeywordType.Print => PrintStatement(),
+                            KeywordType.Assert => AssertStatement(),
+                            KeywordType.End when DoBlock => new NoOpNode(),
+                            _ => null // TODO: ErrorStatement?
+                        };
+                        if (statement == null)
+                        {
+                            UnexpectedKeywordError(StatementFirstKeywords);
+                        }
+
+                        return statement;
                     }
+                    case TokenType.Identifier:
+                        return AssignmentStatement();
+                    default:
+                        UnexpectedTokenError(StatementFirstTokens);
+                        break;
+                }
 
-                    break;
-                case TokenType.Identifier:
-                    return AssignmentStatement();
-                default:
-                    UnexpectedTokenError(null);
-                    break;
+                return null;
             }
-
-            return null;
+            catch (Exception)
+            {
+                Console.WriteLine("caught");
+                return NoOpStatement;
+            }
         }
 
         private Node DoEndBlock(KeywordType expectedEnd)
@@ -207,7 +218,7 @@ namespace Parse
                 MatchKeywordType(KeywordType.End),
                 MatchKeywordType(expectedEnd) // ie. started with for, end with "end for";
             );
-            
+
             DoBlock = false;
 
             return statements;
@@ -220,7 +231,7 @@ namespace Parse
                 MatchTokenType(TokenType.Assignment),
                 Expression()
             );
-            
+
             return new AssignmentNode
             {
                 Id = new VariableNode
@@ -228,7 +239,7 @@ namespace Parse
                     Token = id
                 },
                 Expression = expr
-            }; 
+            };
         }
 
         private Node AssertStatement()
@@ -242,7 +253,7 @@ namespace Parse
             return new StatementNode
             {
                 Token = token,
-                Arguments = new List<Node> { expr }
+                Arguments = new List<Node> {expr}
             };
         }
 
@@ -256,7 +267,7 @@ namespace Parse
             return new StatementNode
             {
                 Token = token,
-                Arguments = new List<Node> { value }
+                Arguments = new List<Node> {value}
             };
         }
 
@@ -270,10 +281,12 @@ namespace Parse
             return new StatementNode
             {
                 Token = token,
-                Arguments = new List<Node> { new VariableNode
+                Arguments = new List<Node>
+                {
+                    new VariableNode
                     {
                         Token = id
-                    } 
+                    }
                 }
             };
         }
@@ -302,10 +315,10 @@ namespace Parse
         private Node VarStatement()
         {
             var (token, id, _, type) = (
-              MatchKeywordType(KeywordType.Var),
-              MatchTokenType(TokenType.Identifier),
-              MatchTokenType(TokenType.Colon),
-              Type()
+                MatchKeywordType(KeywordType.Var),
+                MatchTokenType(TokenType.Identifier),
+                MatchTokenType(TokenType.Colon),
+                Type()
             );
 
             var n = new AssignmentNode
@@ -319,7 +332,7 @@ namespace Parse
             };
             if (InputTokenType == TokenType.Separator)
             {
-                n.Expression = new NoOpNode();
+                n.Expression = NoOpStatement;
                 return n;
             }
 
@@ -343,7 +356,7 @@ namespace Parse
             var tt = MatchKeywordType(expectedTypes);
 
             if (tt != null) return tt.KeywordType.ToPrimitiveType();
-            
+
             UnexpectedKeywordError(expectedTypes);
             return PrimitiveType.Void;
         }
@@ -366,9 +379,10 @@ namespace Parse
 
                         return new ExpressionNode
                         {
-                            Expression = new BinaryNode {
+                            Expression = new BinaryNode
+                            {
                                 Left = opnd1,
-                                Op = op,
+                                Token = op,
                                 Right = opnd2
                             }
                         };
@@ -383,8 +397,9 @@ namespace Parse
 
                     return new ExpressionNode
                     {
-                        Expression = new UnaryNode {
-                            Op = op,
+                        Expression = new UnaryNode
+                        {
+                            Token = op,
                             Value = opnd
                         }
                     };
@@ -435,16 +450,17 @@ namespace Parse
 
             return null; //Node.Of(NodeType.Unknown);
         }
-        
-        public static Dictionary<TokenType, PrimitiveType> TokenToPrimitiveType = new Dictionary<TokenType, PrimitiveType>()
-        {
-            [TokenType.IntValue] = PrimitiveType.Int,
-            [TokenType.StringValue] = PrimitiveType.String,
-            [TokenType.BoolValue] = PrimitiveType.Bool,
-        };
+
+        public static Dictionary<TokenType, PrimitiveType> TokenToPrimitiveType =
+            new Dictionary<TokenType, PrimitiveType>()
+            {
+                [TokenType.IntValue] = PrimitiveType.Int,
+                [TokenType.StringValue] = PrimitiveType.String,
+                [TokenType.BoolValue] = PrimitiveType.Bool,
+            };
 
         private Token Operator() => MatchTokenType(TokenType.Operator);
-        
+
         private Token UnaryOperator() // TODO: this was a bit wonky 
         {
             var t = MatchTokenType(TokenType.Operator);
@@ -453,7 +469,6 @@ namespace Parse
 
             UnexpectedTokenError(t.Type); // TODO: not actually correct
             return t;
-
         }
 
         private Token MatchTokenType(TokenType tt)

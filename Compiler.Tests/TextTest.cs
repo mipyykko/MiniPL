@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using NUnit.Framework;
 using FluentAssertions;
 using Text = Compiler.Common.Text;
@@ -85,6 +86,16 @@ not     skipping
             text.Current.Should().Equals('/');
             text.SkipSpacesAndComments();
             text.Current.Should().Equals('b');
+        }
+
+        [Test()]
+        public void RunawayCommentTest()
+        {
+            var text = Text.Of("/* asdf\nhas no end");
+
+            Action throwingAct = () => text.SkipSpacesAndComments();
+
+            throwingAct.Should().Throw<SyntaxErrorException>();
         }
 
         [Test()]

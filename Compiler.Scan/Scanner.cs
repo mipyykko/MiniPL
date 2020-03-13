@@ -8,8 +8,8 @@ namespace Compiler.Scan
     public class Scanner
     {
         public Text Text { get; private set; }
-        private int startPos;
-        private int startLinePos;
+        private int _startPos;
+        private int _startLinePos;
 
         private char Current => Text.Current;
         private char Peek => Text.Peek;
@@ -23,17 +23,16 @@ namespace Compiler.Scan
 
         private (int Start, int End) TokenRange(string token)
         {
-            return (startPos, startPos + Math.Max(0, token.Length - 1));
+            return (_startPos, _startPos + Math.Max(0, token.Length - 1));
         }
 
         private (int Line, int Start, int End) TokenLineRange(string token)
         {
-            return (Text.Line, startLinePos, startLinePos + Math.Max(0, token.Length - 1));
+            return (Text.Line, _startLinePos, _startLinePos + Math.Max(0, token.Length - 1));
         }
 
         private SourceInfo GetSourceInfo(string token)
         {
-            var tokenLength = Math.Max(0, token.Length - 1);
             return SourceInfo.Of(
                 TokenRange(token),
                 TokenLineRange(token)
@@ -46,8 +45,8 @@ namespace Compiler.Scan
 
             if (IsExhausted) return Token.Of(TokenType.EOF, GetSourceInfo(""));
 
-            startPos = Text.Pos;
-            startLinePos = Text.LinePos;
+            _startPos = Text.Pos;
+            _startLinePos = Text.LinePos;
             var (tokenType, token) = GetTrivialToken();
 
             switch (tokenType)
