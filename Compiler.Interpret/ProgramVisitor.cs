@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Compiler.Common;
 using Compiler.Common.AST;
+using Compiler.Symbols;
 using Node = Compiler.Common.AST.Node;
 
 namespace Compiler.Interpret
@@ -10,32 +12,12 @@ namespace Compiler.Interpret
     public class ProgramVisitor : Visitor
     {
         private Text _source;
+        private SymbolTable _symbolTable;
 
-        public ProgramVisitor(Text source) => _source = source;
-        
-        Dictionary<string, (PrimitiveType, object)> SymbolTable = new Dictionary<string, (PrimitiveType, object)>();
-        Dictionary<string, bool> ControlVariables = new Dictionary<string, bool>();
-        
-
-        private ErrorType UpdateSymbol(string id, PrimitiveType type, object value, bool control = false)
+        public ProgramVisitor(SymbolTable symbolTable, Text source)
         {
-            if (!control && ControlVariables.TryGetValueOrDefault(id))
-            {
-                return ErrorType.AssignmentToControlVariable;
-            }
-
-            SymbolTable[id] = (type, ParseResult(type, value));
-            return ErrorType.Unknown;
-        }
-
-        private ErrorType UpdateSymbol(string id, object value, bool control = false)
-        {
-            return UpdateSymbol(id, SymbolTable.TryGetValueOrDefault(id).Item1, value, control);
-        }
-
-        private ErrorType UpdateControlVariable(string id, object value)
-        {
-            return UpdateSymbol(id, value, true);
+            _symbolTable = symbolTable;
+            _source = source;
         }
 
         public override object Visit(StatementNode node)
@@ -55,10 +37,12 @@ namespace Compiler.Interpret
                     break;
                 case KeywordType.Read:
                 {
-                    var value = Console.ReadLine();
                     var id = ((VariableNode) node.Arguments[0]).Token.Content;
+                    var (type, _) = _symbolTable.LookupSymbol(id);
+                    var value = Console.ReadLine();
 
-                    UpdateSymbol(id, value);
+                    _symbolTable.ParseResult(type, value); // does it error?
+                    _symbolTable.UpdateSymbol(id, value);
                     break;
                 }
                 default:
@@ -82,28 +66,30 @@ namespace Compiler.Interpret
                     $"invalid range {rangeStart}..{rangeEnd}");
             }
 
-            if (!SymbolTable.ContainsKey(id))
+            if (!_symbolTable.SymbolExists(id)) // TODO
             {
                 ThrowError(ErrorType.UndeclaredVariable,
                     node,
                     $"control variable {id} not declared");
             }
 
-            error = UpdateSymbol(id, (int) rangeStart);
+            error = _symbolTable.UpdateSymbol(id, (int) rangeStart);
             if (error != ErrorType.Unknown)
             {
                 ThrowError(error,
                     node,
                     $"unable to assign to control variable {id}");
             }
-            ControlVariables[id] = true;
+
+            _symbolTable.SetControlVariable(id);
+            // ControlVariables[id] = true;
             var i = (int) rangeStart;
 
             while (i <= (int) rangeEnd)
             {
                 node.Statements.Accept(this);
                 i++;
-                error = UpdateControlVariable(id, i);
+                error = _symbolTable.UpdateControlVariable(id, i);
                 if (error != ErrorType.Unknown)
                 {
                     ThrowError(error,
@@ -112,8 +98,7 @@ namespace Compiler.Interpret
                 }
             }
 
-            ;
-            ControlVariables[id] = false;
+            _symbolTable.UnsetControlVariable(id);
 
             return null;
         }
@@ -197,32 +182,21 @@ namespace Compiler.Interpret
         {
             var id = node.Id.Token.Content;
             var value = node.Expression.Accept(this);
-            var type = PrimitiveType.Void;
+            var type = node.Type;
 
-            if (node.Token?.KeywordType == KeywordType.Var)
+            if (node.Token?.KeywordType != KeywordType.Var)
             {
-                if (SymbolTable.ContainsKey(id))
-                {
-                    ThrowError(ErrorType.RedeclaredVariable,
-                        node,
-                        $"variable {id} already defined");
-                }
-
-                type = node.Type;
-            }
-            else
-            {
-                if (!SymbolTable.ContainsKey(id))
+                if (!_symbolTable.SymbolExists(id))
                 {
                     ThrowError(ErrorType.UndeclaredVariable,
                         node,
                         $"variable {id} not declared");
                 }
 
-                type = SymbolTable[id].Item1;
+                (type, _) = _symbolTable.LookupSymbol(id);
             }
 
-            UpdateSymbol(id, type, value);
+            _symbolTable.UpdateSymbol(id, type, value);
             Debug.WriteLine($"modified {id} {type} {value}");
 
             return value;
@@ -242,32 +216,22 @@ namespace Compiler.Interpret
             return null; // we'll never get here, but anyway
         }
 
-        public object ParseResult(PrimitiveType type, object value) =>
-            type switch
-            {
-                PrimitiveType.Int when value is string s => int.Parse(s),
-                PrimitiveType.String => (string) value,
-                PrimitiveType.Bool when value is string s => s.ToLower().Equals("true"),
-                _ => value
-            };
-
         public override object Visit(LiteralNode node)
         {
-            return ParseResult(node.Type, node.Token.Content);
+            return _symbolTable.ParseResult(node.Type, node.Token.Content);
         }
 
         public override object Visit(VariableNode node)
         {
-            var name = node.Token.Content;
-            if (!SymbolTable.ContainsKey(name))
+            var id = node.Token.Content;
+            if (!_symbolTable.SymbolExists(id))
             {
                 ThrowError(ErrorType.UndeclaredVariable,
                     node,
-                    $"{name} not declared");
+                    $"{id} not declared");
             }
 
-            var ( _,  value) = SymbolTable[name];
-            return value;
+            return _symbolTable.LookupSymbol(id);
         }
 
         // public override object Visit(ErrorNode node)

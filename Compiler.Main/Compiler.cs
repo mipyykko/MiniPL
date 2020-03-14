@@ -1,9 +1,9 @@
 ﻿using System;
-using Compiler.Common.AST;
 using Compiler.Interpret;
 using Compiler.Scan;
 using Text = Compiler.Common.Text;
-using Parse;
+using Compiler.Parse;
+using Compiler.Symbols;
 
 namespace Compiler.Main
 {
@@ -13,7 +13,8 @@ namespace Compiler.Main
         {
             var sourceText = Text.Of(source);
             var scanner = new Scanner(sourceText);
-            var parser = new Parser(scanner);
+            var symboltable = new SymbolTable();
+            var parser = new Parser(scanner, symboltable);
             var tree = parser.Program();
             tree.AST();
             if (parser.Errors.Count > 0)
@@ -23,7 +24,7 @@ namespace Compiler.Main
                     Console.WriteLine(error);
                 }
             }
-            new Interpreter(tree, sourceText);
+            new Interpreter(tree, sourceText, symboltable);
         }
     }
 }

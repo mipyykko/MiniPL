@@ -5,17 +5,19 @@ using System.Linq;
 using System.Text;
 using Compiler.Common;
 using Compiler.Common.AST;
-using Compiler.Parse;
+using Compiler.Symbols;
 using Compiler.Scan;
 using Node = Compiler.Common.AST.Node;
 
-namespace Parse
+namespace Compiler.Parse
 {
     public partial class Parser
     {
         private List<Error> errors = new List<Error>();
         private readonly Scanner scanner;
         private Token InputToken;
+
+        private SymbolTable _symbolTable;
 
         // private Node tree;
         private bool DoBlock { get; set; }
@@ -26,7 +28,7 @@ namespace Parse
 
         private static readonly Node NoOpStatement = new NoOpNode();
 
-        public Parser(Scanner scanner)
+        public Parser(Scanner scanner, SymbolTable symbolTable)
         {
             /* TODO:
                get rid of those tuple things, or find some other thing
@@ -34,25 +36,29 @@ namespace Parse
                fails - now it leads to cascading errors
             */
             this.scanner = scanner;
+            _symbolTable = symbolTable;
         }
 
         public List<Error> Errors => errors;
-        
-        private void ParseError(ErrorType type, string message)
+
+        private void ParseError(ErrorType type, Token errorToken, string message)
         {
-            Console.WriteLine(message);
-            errors.Add(Error.Of(type, message));                        
-            throw new SyntaxErrorException(message);
+            var sb = new StringBuilder($"{GetLine(errorToken)}\n{GetErrorPosition(errorToken)}\n");
+            sb.Append(message);
+            var errorMessage = sb.ToString();
+            Console.WriteLine(errorMessage);
+            errors.Add(Error.Of(type, errorToken, errorMessage));
+            throw new SyntaxErrorException(errorMessage);
         }
 
-        private string GetLine => scanner.Text.Lines[InputToken.SourceInfo.LineRange.Line];
+        private string GetLine(Token t) => scanner.Text.Lines[t.SourceInfo.LineRange.Line];
 
-        private string GetErrorPosition => new string(' ', Math.Max(0, InputToken.SourceInfo.LineRange.Start))
-                                           + new string('^', Math.Max(1, InputTokenContent.Length));
+        private string GetErrorPosition(Token t) => new string(' ', Math.Max(0, t.SourceInfo.LineRange.Start))
+                                           + new string('^', Math.Max(1, t.Content.Length));
 
         private void UnexpectedKeywordError(params KeywordType[] kwts)
         {
-            var sb = new StringBuilder($"{GetLine}\n{GetErrorPosition}\n");
+            var sb = new StringBuilder();
             sb.Append(
                 kwts.Length switch
                 {
@@ -62,13 +68,14 @@ namespace Parse
                     $"expected one of keyword types {string.Join(", ", kwts)}, got {InputTokenContent} of type {InputTokenKeywordType}"
                 }
             );
+            var errorToken = InputToken;
             SkipToTokenType(TokenType.Separator);
-            ParseError(ErrorType.UnexpectedKeyword, sb.ToString());
+            ParseError(ErrorType.UnexpectedKeyword, errorToken, sb.ToString());
         }
 
         private void UnexpectedTokenError(params TokenType[] tts)
         {
-            var sb = new StringBuilder($"{GetLine}\n{GetErrorPosition}\n");
+            var sb = new StringBuilder();
             sb.Append(
                 tts.Length switch
                 {
@@ -78,8 +85,9 @@ namespace Parse
                     $"expected one of token types {string.Join(", ", tts)}, got {InputTokenContent} of type {InputTokenType}"
                 }
             );
+            var errorToken = InputToken;
             SkipToTokenType(TokenType.Separator);
-            ParseError(ErrorType.UnexpectedToken, sb.ToString());
+            ParseError(ErrorType.UnexpectedToken, errorToken, sb.ToString());
         }
 
         private void NextToken() => InputToken = scanner.GetNextToken();
@@ -141,7 +149,7 @@ namespace Parse
                             KeywordType.End when DoBlock => NoOpStatement,
                             _ => throw new SyntaxErrorException()
                         };
-                        Console.WriteLine($"Statement: {statement.GetType()}");
+
                         if (statement == null)
                         {
                             UnexpectedKeywordError(StatementFirstKeywords);
@@ -236,6 +244,8 @@ namespace Parse
                 Expression()
             );
 
+            CheckSymbol(id.Content, true);
+
             return new AssignmentNode
             {
                 Id = new VariableNode
@@ -282,6 +292,8 @@ namespace Parse
                 MatchTokenType(TokenType.Identifier)
             );
 
+            CheckSymbol(id.Content, true);
+
             return new StatementNode
             {
                 Token = token,
@@ -295,17 +307,46 @@ namespace Parse
             };
         }
 
+        private void CheckSymbol(string id, bool exists = false)
+        {
+            if (exists && _symbolTable.SymbolExists(id)) return;
+            if (!exists && !_symbolTable.SymbolExists(id)) return;
+
+            var errorToken = InputToken;
+            SkipToTokenType(TokenType.Separator);
+
+            if (exists)
+            {
+                ParseError(ErrorType.UndeclaredVariable,
+                    errorToken,
+                    $"variable {id} not declared");
+            }
+            else
+            {
+                ParseError(ErrorType.RedeclaredVariable,
+                    errorToken,
+                    $"variable {id} already declared");
+            }
+        }
+
         private Node ForStatement()
         {
-            var (_, id, __, rangeStart, ___, rangeEnd, statements) = (
-                MatchKeywordType(KeywordType.For),
-                MatchTokenType(TokenType.Identifier),
-                MatchKeywordType(KeywordType.In),
-                Expression(),
-                MatchTokenType(TokenType.Range),
-                Expression(),
-                DoEndBlock(KeywordType.For)
-            );
+            MatchKeywordType(KeywordType.For);
+            var id = MatchTokenType(TokenType.Identifier);
+
+            CheckSymbol(id.Content, true);
+
+            MatchKeywordType(KeywordType.In);
+            var rangeStart = Expression();
+            MatchTokenType(TokenType.Range);
+            var rangeEnd = Expression();
+
+            // _symbolTable.SetControlVariable(id.Content);
+            // TODO: don't know if parser should care about this
+
+            var statements = DoEndBlock(KeywordType.For);
+
+            // _symbolTable.UnsetControlVariable(id.Content); 
 
             return new ForNode
             {
@@ -320,12 +361,15 @@ namespace Parse
         {
             try
             {
-                var (token, id, _, type) = (
-                    MatchKeywordType(KeywordType.Var),
-                    MatchTokenType(TokenType.Identifier),
-                    MatchTokenType(TokenType.Colon),
-                    Type()
-                );
+                var token = MatchKeywordType(KeywordType.Var);
+                var id = MatchTokenType(TokenType.Identifier);
+
+                CheckSymbol(id.Content, false);
+
+                MatchTokenType(TokenType.Colon);
+                var type = Type();
+
+                _symbolTable.DeclareSymbol(id.Content, type); // TODO: error
 
                 var n = new AssignmentNode
                 {
@@ -441,7 +485,9 @@ namespace Parse
                 }
                 case TokenType.Identifier:
                 {
-                    var t = MatchTokenType(InputTokenType);
+                    var t = MatchTokenType(TokenType.Identifier);
+                    CheckSymbol(t.Content, true);
+
                     return new VariableNode
                     {
                         Token = t
@@ -497,15 +543,6 @@ namespace Parse
             return matchedToken;
         }
 
-        public Token MatchTokenType(params TokenType[] tts)
-        {
-            foreach (var tt in tts)
-                if (InputTokenType == tt)
-                    return MatchTokenType(tt);
-            UnexpectedTokenError(null); // TODO: one of
-            return null;
-        }
-
         private Token MatchKeywordType(KeywordType kwt)
         {
             if (InputTokenKeywordType == kwt)
@@ -538,7 +575,7 @@ namespace Parse
         private bool MatchContent(string s)
         {
             if (InputTokenContent.Equals(s)) return true;
-            ParseError(ErrorType.SyntaxError, $"expected {s}");
+            ParseError(ErrorType.SyntaxError, InputToken, $"expected {s}");
             return false;
         }
 

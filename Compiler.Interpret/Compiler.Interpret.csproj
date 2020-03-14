@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Compiler.Common\Compiler.Common.csproj" />
+    <ProjectReference Include="..\Compiler.Symbols\Compiler.Symbols.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

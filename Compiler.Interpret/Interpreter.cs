@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using Compiler.Common;
-using Compiler.Common.AST;
+using Compiler.Symbols;
 using Node = Compiler.Common.AST.Node;
 
 namespace Compiler.Interpret
@@ -10,11 +8,13 @@ namespace Compiler.Interpret
     public class Interpreter
     {
         private Node _tree;
-
-        public Interpreter(Node tree, Text source)
+        private SymbolTable _symbolTable;
+        
+        public Interpreter(Node tree, Text source, SymbolTable symbolTable)
         {
             _tree = tree;
-            Visitor v = new ProgramVisitor(source);
+            _symbolTable = symbolTable;
+            Visitor v = new ProgramVisitor(_symbolTable, source);
             _tree.Accept(v);
         }
     }

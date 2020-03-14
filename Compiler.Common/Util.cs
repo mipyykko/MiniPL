@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Compiler.Common
 {
@@ -38,6 +39,13 @@ namespace Compiler.Common
         }
         
         public static string Spaces(int n) => new string(' ', n); 
+        public static PrimitiveType GuessType(string value)
+        {
+            if (value == null) return PrimitiveType.Void;
+            if (value[0] == '-' && value.Substring(1).ToCharArray().All(char.IsDigit)) return PrimitiveType.Int;
+            if (value.ToCharArray().All(char.IsDigit)) return PrimitiveType.Int;
+            return PrimitiveType.String;
+        }
         
     }
 }
