@@ -50,11 +50,7 @@ namespace Compiler.Common
         True,
         False
     }
-
-    static class KeywordTypeMethods
-    {
-    }
-
+    
     public class Token
     {
         public TokenType Type { get; private set; }

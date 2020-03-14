@@ -47,5 +47,49 @@ namespace Compiler.Common
             return PrimitiveType.String;
         }
         
+        public static void Deconstruct<T0>(this object[] items, out T0 t0)
+        {
+            t0 = items.Length > 0 ? (T0) items[0] : default;
+        }
+
+        public static void Deconstruct<T0, T1>(this object[] items, out T0 t0, out T1 t1)
+        {
+            t0 = items.Length > 0 ? (T0) items[0] : default;
+            t1 = items.Length > 1 ? (T1) items[1] : default;
+        }
+        
+        public static void Deconstruct<T0, T1, T2>(this object[] items, out T0 t0, out T1 t1, out T2 t2)
+        {
+            t0 = items.Length > 0 ? (T0) items[0] : default;
+            t1 = items.Length > 1 ? (T1) items[1] : default;
+            t2 = items.Length > 2 ? (T2) items[2] : default;
+        }
+
+        public static void Deconstruct<T0, T1, T2, T3>(this object[] items, out T0 t0, out T1 t1, out T2 t2, out T3 t3)
+        {
+            t0 = items.Length > 0 ? (T0) items[0] : default;
+            t1 = items.Length > 1 ? (T1) items[1] : default;
+            t2 = items.Length > 2 ? (T2) items[2] : default;
+            t3 = items.Length > 3 ? (T3) items[3] : default;
+        }
+        
+        public static void Deconstruct<T0, T1, T2, T3, T4>(this object[] items, out T0 t0, out T1 t1, out T2 t2, out T3 t3, out T4 t4)
+        {
+            t0 = items.Length > 0 ? (T0) items[0] : default;
+            t1 = items.Length > 1 ? (T1) items[1] : default;
+            t2 = items.Length > 2 ? (T2) items[2] : default;
+            t3 = items.Length > 3 ? (T3) items[3] : default;
+            t4 = items.Length > 4 ? (T4) items[4] : default;
+        }
+        
+        public static void Deconstruct<T0, T1, T2, T3, T4, T5>(this object[] items, out T0 t0, out T1 t1, out T2 t2, out T3 t3, out T4 t4, out T5 t5)
+        {
+            t0 = items.Length > 0 ? (T0) items[0] : default;
+            t1 = items.Length > 1 ? (T1) items[1] : default;
+            t2 = items.Length > 2 ? (T2) items[2] : default;
+            t3 = items.Length > 3 ? (T3) items[3] : default;
+            t4 = items.Length > 4 ? (T4) items[4] : default;
+            t5 = items.Length > 5 ? (T5) items[5] : default;
+        }
     }
 }

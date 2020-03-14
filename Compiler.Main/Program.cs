@@ -2,7 +2,7 @@
 
 namespace Compiler.Main
 {
-    internal class MainClass
+    internal class Program
     {
         public static void Main(string[] args)
         {
@@ -31,7 +31,7 @@ comment */
             var test3 = $@"print ""Give a number"";
 var n : int;
 read n;
-var v : int := 1;
+var v : int := 0;
 var i : int;
 for i in 1..n do
     v := v * i;

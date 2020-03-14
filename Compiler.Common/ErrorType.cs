@@ -10,6 +10,7 @@ namespace Compiler.Common
         UnexpectedToken,
         UndeclaredVariable,
         RedeclaredVariable,
+        UninitializedVariable,
         AssignmentToControlVariable,
         InvalidRange,
         InvalidOperation
