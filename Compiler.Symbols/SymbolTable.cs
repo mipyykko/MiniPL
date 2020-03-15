@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Runtime.InteropServices.ComTypes;
 using Compiler.Common;
 using static Compiler.Common.Util;
 
@@ -8,7 +9,7 @@ namespace Compiler.Symbols
 {
     public class SymbolTable
     {
-        private Dictionary<string, (PrimitiveType, object)> Symbols = new Dictionary<string, (PrimitiveType, object)>();
+        private Dictionary<string, (PrimitiveType Type, object Value)> Symbols = new Dictionary<string, (PrimitiveType, object)>();
         private Dictionary<string, bool> ControlVariables = new Dictionary<string, bool>();
 
         public ErrorType UpdateSymbol(string id, PrimitiveType type, object value = null, bool control = false)
@@ -24,7 +25,7 @@ namespace Compiler.Symbols
         
         public ErrorType UpdateSymbol(string id, object value, bool control = false)
         {
-            return UpdateSymbol(id, Symbols.TryGetValueOrDefault(id).Item1, value, control);
+            return UpdateSymbol(id, Symbols.TryGetValueOrDefault(id).Type, value, control);
         }
 
         public ErrorType DeclareSymbol(string id, PrimitiveType type)
@@ -63,20 +64,27 @@ namespace Compiler.Symbols
             return ErrorType.Unknown;
         }
 
-        public (PrimitiveType, object) LookupSymbol(string id)
+        public bool IsControlVariable(string id) => ControlVariables.TryGetValueOrDefault(id);
+
+        public object LookupSymbol(string id)
         {
             if (!Symbols.ContainsKey(id))
             {
-                throw new Exception(); // TODO
+                return null;
             }
 
             return Symbols[id];
         }
 
+        public object LookupValue(string id) => (((PrimitiveType, object)?) LookupSymbol(id))?.Item2;
+
+        public object LookupType(string id) => (((PrimitiveType, object)?) LookupSymbol(id))?.Item1;
+
         public bool SymbolExists(string id) => Symbols.ContainsKey(id);
 
         public object ParseResult(PrimitiveType type, object value)
         {
+
             try
             {
                 return type switch

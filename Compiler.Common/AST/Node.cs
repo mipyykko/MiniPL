@@ -95,11 +95,7 @@ namespace Compiler.Common.AST
 
         public List<Node> Arguments { get; set; }
         
-        public override PrimitiveType Type
-        {
-            get => PrimitiveType.Void;
-            set => Type = value;
-        }
+        public override PrimitiveType Type { get; set; } = PrimitiveType.Void;
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
         public override void AST(int depth = 0, string caller = "")
@@ -134,18 +130,22 @@ namespace Compiler.Common.AST
     {
         public override string Name => "Variable";
 
-        public override PrimitiveType Type {
-            get
+        private PrimitiveType _type;
+
+        public VariableNode()
+        {
+            _type = Token?.Type switch
             {
-                return Token.Type switch
-                {
-                    TokenType.IntValue => PrimitiveType.Int,
-                    TokenType.BoolValue => PrimitiveType.Bool,
-                    TokenType.StringValue => PrimitiveType.String,
-                    _ => PrimitiveType.Void
-                };
-            }
-            set => Type = value;
+                TokenType.IntValue => PrimitiveType.Int,
+                TokenType.BoolValue => PrimitiveType.Bool,
+                TokenType.StringValue => PrimitiveType.String,
+                _ => PrimitiveType.Void
+            };
+
+        }
+        public override PrimitiveType Type {
+            get => _type;
+            set => _type = value;
         } 
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
@@ -196,10 +196,6 @@ namespace Compiler.Common.AST
         public Node Left;
         public Node Right;
 
-        public StatementListNode()
-        {
-        }
-        
         public override PrimitiveType Type
         {
             get => PrimitiveType.Void; 
@@ -220,10 +216,14 @@ namespace Compiler.Common.AST
 
     public class LiteralNode : Node
     {
-        // public PrimitiveType ValueType;
         public override string Name => "Literal";
+        private PrimitiveType _type;
 
-        public override PrimitiveType Type { get; set; }
+        public override PrimitiveType Type
+        {
+            get => TokenToPrimitiveType(Token.Type); 
+            set => _type = value;
+        }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
         public override void AST(int depth = 0, string caller = "")

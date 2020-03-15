@@ -38,7 +38,7 @@ namespace Compiler.Interpret
                 case KeywordType.Read:
                 {
                     var id = ((VariableNode) node.Arguments[0]).Token.Content;
-                    var (type, _) = _symbolTable.LookupSymbol(id);
+                    var type = (PrimitiveType) _symbolTable.LookupType(id);
                     var value = Console.ReadLine();
 
                     _symbolTable.ParseResult(type, value); // does it error?
@@ -52,14 +52,29 @@ namespace Compiler.Interpret
             return null;
         }
 
+        private (PrimitiveType, object) FindType(object value) 
+        {
+            if (value is ValueTuple<PrimitiveType, object>)
+            {
+                return (ValueTuple<PrimitiveType, object>) value;
+            }
+
+            if (value is int)
+            {
+                return (PrimitiveType.Int, value);
+            }
+            return (Util.GuessType((string) value), value);
+        }
+        
         public override object Visit(ForNode node)
         {
             var id = node.Token.Content;
-            var rangeStart = node.RangeStart.Accept(this);
-            var rangeEnd = node.RangeEnd.Accept(this);
+            var (rangeStartType, rangeStart) = FindType(node.RangeStart.Accept(this));
+            var (rangeEndType, rangeEnd) = FindType(node.RangeEnd.Accept(this));
             var error = ErrorType.Unknown;
             
-            if (!(rangeStart is int) || !(rangeEnd is int))
+            //if (!(rangeStart is int) || !(rangeEnd is int))
+            if (rangeStartType != PrimitiveType.Int || rangeEndType != PrimitiveType.Int)
             {
                 ThrowError(ErrorType.InvalidRange,
                     node,
@@ -134,16 +149,16 @@ namespace Compiler.Interpret
 
         public override object Visit(BinaryNode node)
         {
-            var opnd1 = node.Left.Accept(this);
-            var opnd2 = node.Right.Accept(this);
+            var (opnd1Type, opnd1) = FindType(node.Left.Accept(this));
+            var (opnd2Type, opnd2) = FindType(node.Right.Accept(this));
             var op = ToOperatorType.TryGetValueOrDefault(node.Token.Content);
 
             switch (op)
             {
-                case OperatorType.Addition when opnd1 is int o1 && opnd2 is int o2:
-                    return o1 + o2;
-                case OperatorType.Addition when opnd1 is string o1 && opnd2 is string o2:
-                    return o1 + o2;
+                case OperatorType.Addition when opnd1Type == PrimitiveType.Int && opnd2Type == PrimitiveType.Int: // opnd1 is int o1 && opnd2 is int o2:
+                    return (int) opnd1 + (int) opnd2;//o1 + o2;
+                case OperatorType.Addition when opnd1Type == PrimitiveType.String && opnd2Type == PrimitiveType.String: // opnd1 is string o1 && opnd2 is string o2:
+                    return (string) opnd1 + (string) opnd2;//o1 + o2;
                 case OperatorType.Addition:
                     ThrowError(ErrorType.InvalidOperation,
                         node,
@@ -192,11 +207,10 @@ namespace Compiler.Interpret
                         node,
                         $"variable {id} not declared");
                 }
-
-                (type, _) = _symbolTable.LookupSymbol(id);
             }
+            
 
-            _symbolTable.UpdateSymbol(id, type, value);
+            _symbolTable.UpdateSymbol(id, value);
             Debug.WriteLine($"modified {id} {type} {value}");
 
             return value;
@@ -218,6 +232,7 @@ namespace Compiler.Interpret
 
         public override object Visit(LiteralNode node)
         {
+            Console.WriteLine($"visiting literal {node}, parsing {node.Type}, {node.Token.Content}");
             return _symbolTable.ParseResult(node.Type, node.Token.Content);
         }
 
@@ -231,7 +246,7 @@ namespace Compiler.Interpret
                     $"{id} not declared");
             }
 
-            return _symbolTable.LookupSymbol(id);
+            return _symbolTable.LookupValue(id);
         }
 
         // public override object Visit(ErrorNode node)

@@ -13,9 +13,12 @@ namespace Compiler.Main
         {
             var sourceText = Text.Of(source);
             var scanner = new Scanner(sourceText);
-            var symboltable = new SymbolTable();
-            var parser = new Parser(scanner, symboltable);
+            var parser = new Parser(scanner);
             var tree = parser.Program();
+            var symbolTable = new SymbolTable();
+            var symbolTableVisitor = new SymbolTableVisitor(symbolTable);
+            tree.Accept(symbolTableVisitor);
+            
             tree.AST();
             if (parser.Errors.Count > 0)
             {
@@ -24,7 +27,7 @@ namespace Compiler.Main
                     Console.WriteLine(error);
                 }
             }
-            new Interpreter(tree, sourceText, symboltable);
+            new Interpreter(tree, sourceText, symbolTable);
         }
     }
 }

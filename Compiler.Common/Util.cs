@@ -19,26 +19,28 @@ namespace Compiler.Common
             return Array.IndexOf(array, value) >= 0;
         }
         
-        public static PrimitiveType ToPrimitiveType(this KeywordType kw)
-        {
-            switch (kw)
+        public static PrimitiveType ToPrimitiveType(this KeywordType kw) => 
+            kw switch
             {
-                case KeywordType.Int:
-                    return PrimitiveType.Int;
-                case KeywordType.String:
-                    return PrimitiveType.String;
-                case KeywordType.Bool:
-                    return PrimitiveType.Bool;
-                case KeywordType.Assert:
-                case KeywordType.Print:
-                case KeywordType.Read:
-                    return PrimitiveType.Void;
-                default:
-                    return PrimitiveType.Void;
-            }
-        }
-        
-        public static string Spaces(int n) => new string(' ', n); 
+                KeywordType.Int => PrimitiveType.Int,
+                KeywordType.String => PrimitiveType.String,
+                KeywordType.Bool => PrimitiveType.Bool,
+                KeywordType.Assert => PrimitiveType.Void,
+                KeywordType.Print => PrimitiveType.Void,
+                KeywordType.Read => PrimitiveType.Void,
+                _ => PrimitiveType.Void
+            };
+
+        public static string Spaces(int n) => new string(' ', n);
+        public static PrimitiveType TokenToPrimitiveType(TokenType tt) => 
+            tt switch
+            {
+                TokenType.IntValue => PrimitiveType.Int,
+                TokenType.StringValue => PrimitiveType.String,
+                TokenType.BoolValue => PrimitiveType.Bool,
+                _ => PrimitiveType.Void
+            };
+
         public static PrimitiveType GuessType(string value)
         {
             if (value == null) return PrimitiveType.Void;
