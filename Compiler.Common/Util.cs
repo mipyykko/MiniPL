@@ -49,6 +49,14 @@ namespace Compiler.Common
             return PrimitiveType.String;
         }
         
+        public static object DefaultValue(PrimitiveType pt) => pt switch
+        {
+            PrimitiveType.Bool => "false",
+            PrimitiveType.Int => 0,
+            PrimitiveType.String => "",
+            _ => null
+        };
+
         public static void Deconstruct<T0>(this object[] items, out T0 t0)
         {
             t0 = items.Length > 0 ? (T0) items[0] : default;

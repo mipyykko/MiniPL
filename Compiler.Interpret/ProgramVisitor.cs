@@ -6,17 +6,20 @@ using Compiler.Common;
 using Compiler.Common.AST;
 using Compiler.Symbols;
 using Node = Compiler.Common.AST.Node;
+using static Compiler.Common.Util;
 
 namespace Compiler.Interpret
 {
     public class ProgramVisitor : Visitor
     {
         private Text _source;
+        private ProgramMemory _memory;
         private SymbolTable _symbolTable;
-
+        
         public ProgramVisitor(SymbolTable symbolTable, Text source)
         {
             _symbolTable = symbolTable;
+            _memory = new ProgramMemory(_symbolTable);
             _source = source;
         }
 
@@ -38,79 +41,33 @@ namespace Compiler.Interpret
                 case KeywordType.Read:
                 {
                     var id = ((VariableNode) node.Arguments[0]).Token.Content;
-                    var type = (PrimitiveType) _symbolTable.LookupType(id);
                     var value = Console.ReadLine();
 
-                    _symbolTable.ParseResult(type, value); // does it error?
-                    _symbolTable.UpdateSymbol(id, value);
+                    _memory.UpdateVariable(id, value);
                     break;
                 }
-                default:
-                    break;
             }
 
             return null;
         }
 
-        private (PrimitiveType, object) FindType(object value) 
-        {
-            if (value is ValueTuple<PrimitiveType, object>)
-            {
-                return (ValueTuple<PrimitiveType, object>) value;
-            }
-
-            if (value is int)
-            {
-                return (PrimitiveType.Int, value);
-            }
-            return (Util.GuessType((string) value), value);
-        }
-        
         public override object Visit(ForNode node)
         {
             var id = node.Token.Content;
-            var (rangeStartType, rangeStart) = FindType(node.RangeStart.Accept(this));
-            var (rangeEndType, rangeEnd) = FindType(node.RangeEnd.Accept(this));
-            var error = ErrorType.Unknown;
-            
-            //if (!(rangeStart is int) || !(rangeEnd is int))
-            if (rangeStartType != PrimitiveType.Int || rangeEndType != PrimitiveType.Int)
-            {
-                ThrowError(ErrorType.InvalidRange,
-                    node,
-                    $"invalid range {rangeStart}..{rangeEnd}");
-            }
-
-            if (!_symbolTable.SymbolExists(id)) // TODO
-            {
-                ThrowError(ErrorType.UndeclaredVariable,
-                    node,
-                    $"control variable {id} not declared");
-            }
-
-            error = _symbolTable.UpdateSymbol(id, (int) rangeStart);
-            if (error != ErrorType.Unknown)
-            {
-                ThrowError(error,
-                    node,
-                    $"unable to assign to control variable {id}");
-            }
+            var rangeStart = node.RangeStart.Accept(this);
+            var rangeEnd = node.RangeEnd.Accept(this);
 
             _symbolTable.SetControlVariable(id);
-            // ControlVariables[id] = true;
+
+            _memory.UpdateControlVariable(id, (int) rangeStart);
+
             var i = (int) rangeStart;
 
             while (i <= (int) rangeEnd)
             {
                 node.Statements.Accept(this);
                 i++;
-                error = _symbolTable.UpdateControlVariable(id, i);
-                if (error != ErrorType.Unknown)
-                {
-                    ThrowError(error,
-                        node,
-                        $"unable to assign to control variable {id}");
-                }
+                _memory.UpdateControlVariable(id, i);
             }
 
             _symbolTable.UnsetControlVariable(id);
@@ -130,7 +87,7 @@ namespace Compiler.Interpret
             return null;
         }
 
-        public Dictionary<string, OperatorType> ToOperatorType = new Dictionary<string, OperatorType>()
+        public Dictionary<string, OperatorType> OperatorToOperatorType = new Dictionary<string, OperatorType>()
         {
             ["*"] = OperatorType.Multiplication,
             ["/"] = OperatorType.Division,
@@ -149,33 +106,37 @@ namespace Compiler.Interpret
 
         public override object Visit(BinaryNode node)
         {
-            var (opnd1Type, opnd1) = FindType(node.Left.Accept(this));
-            var (opnd2Type, opnd2) = FindType(node.Right.Accept(this));
-            var op = ToOperatorType.TryGetValueOrDefault(node.Token.Content);
+            var opnd1 = node.Left.Accept(this);
+            var opnd2 = node.Right.Accept(this);
+            var op = OperatorToOperatorType.TryGetValueOrDefault(node.Token.Content);
 
             switch (op)
             {
-                case OperatorType.Addition when opnd1Type == PrimitiveType.Int && opnd2Type == PrimitiveType.Int: // opnd1 is int o1 && opnd2 is int o2:
-                    return (int) opnd1 + (int) opnd2;//o1 + o2;
-                case OperatorType.Addition when opnd1Type == PrimitiveType.String && opnd2Type == PrimitiveType.String: // opnd1 is string o1 && opnd2 is string o2:
-                    return (string) opnd1 + (string) opnd2;//o1 + o2;
-                case OperatorType.Addition:
+                case OperatorType.Addition when opnd1 is int o1 && opnd2 is int o2:
+                    return o1 + o2;
+                case OperatorType.Addition when opnd1 is string o1 && opnd2 is string o2:
+                    return o1 + o2;
+                case OperatorType.Subtraction when opnd1 is int o1 && opnd2 is int o2:
+                    return o1 - o2;
+                case OperatorType.Multiplication when opnd1 is int o1 && opnd2 is int o2:
+                    return o1 * o2;
+                case OperatorType.Division when opnd1 is int o1 && opnd2 is int o2:
+                    return o1 / o2;
+                case OperatorType.And when opnd1 is bool o1 && opnd2 is bool o2:
+                    return o1 && o2;
+                case OperatorType.LessThan when opnd1 is int o1 && opnd2 is int o2:
+                    return o1 < o2;
+                case OperatorType.LessThan when opnd1 is string o1 && opnd2 is string o2:
+                    return string.CompareOrdinal(o1, o2) < 0;
+                case OperatorType.LessThan when opnd1 is bool o1 && opnd2 is bool o2:
+                    return !o1 && o2;
+                case OperatorType.Equals:
+                    return opnd1.Equals(opnd2);
+                default:
                     ThrowError(ErrorType.InvalidOperation,
                         node,
                         $"invalid operation ${op}");
                     break;
-                case OperatorType.Subtraction:
-                    return (int) opnd1 - (int) opnd2;
-                case OperatorType.Multiplication:
-                    return (int) opnd1 * (int) opnd2;
-                case OperatorType.Division:
-                    return (int) opnd1 / (int) opnd2;
-                case OperatorType.And:
-                    return (bool) opnd1 && (bool) opnd2;
-                case OperatorType.LessThan:
-                    return (int) opnd1 < (int) opnd2;
-                case OperatorType.Equals:
-                    return opnd1.Equals(opnd2);
             }
 
             return null;
@@ -199,23 +160,29 @@ namespace Compiler.Interpret
             var value = node.Expression.Accept(this);
             var type = node.Type;
 
-            if (node.Token?.KeywordType != KeywordType.Var)
-            {
-                if (!_symbolTable.SymbolExists(id))
-                {
-                    ThrowError(ErrorType.UndeclaredVariable,
-                        node,
-                        $"variable {id} not declared");
-                }
-            }
-            
-
-            _symbolTable.UpdateSymbol(id, value);
-            Debug.WriteLine($"modified {id} {type} {value}");
+            _memory.UpdateVariable(id, value ?? DefaultValue(type));
 
             return value;
         }
 
+        public override object Visit(LiteralNode node)
+        {
+            return _memory.ParseResult(node.Type, node.Token.Content); // TODO: parsing in wrong place
+        }
+
+        public override object Visit(VariableNode node)
+        {
+            var id = node.Token.Content;
+            if (!_symbolTable.SymbolExists(id))
+            {
+                ThrowError(ErrorType.UndeclaredVariable,
+                    node,
+                    $"{id} not declared");
+            }
+
+            return _memory.LookupVariable(id);
+        }
+        
         private object ThrowError(ErrorType type, Node node, string message)
         {
             var errorLine = node.Token.SourceInfo.LineRange.Line;
@@ -230,29 +197,6 @@ namespace Compiler.Interpret
             return null; // we'll never get here, but anyway
         }
 
-        public override object Visit(LiteralNode node)
-        {
-            Console.WriteLine($"visiting literal {node}, parsing {node.Type}, {node.Token.Content}");
-            return _symbolTable.ParseResult(node.Type, node.Token.Content);
-        }
 
-        public override object Visit(VariableNode node)
-        {
-            var id = node.Token.Content;
-            if (!_symbolTable.SymbolExists(id))
-            {
-                ThrowError(ErrorType.UndeclaredVariable,
-                    node,
-                    $"{id} not declared");
-            }
-
-            return _symbolTable.LookupValue(id);
-        }
-
-        // public override object Visit(ErrorNode node)
-        // {
-        //     Console.WriteLine("I am in errornode visitor?");
-        //     return null; 
-        // }
     }
 }

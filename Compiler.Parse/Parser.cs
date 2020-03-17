@@ -115,45 +115,46 @@ namespace Compiler.Parse
 
         private object Match(object match)
         {
-                try
+            try
+            {
+                return match switch
                 {
-                    return match switch
-                    {
-                        _ when match is TokenType tt => MatchTokenType(tt),
-                        _ when match is KeywordType kwt => MatchKeywordType(kwt),
-                        _ when match is KeywordType[] kwts => MatchKeywordType(kwts),
-                        StatementType.Statement => Statement(),
-                        StatementType.StatementList => StatementList(),
-                        StatementType.StatementStatementList => StatementStatementList(),
-                        StatementType.DoEndBlock => DoEndBlock(),
-                        StatementType.AssignmentStatement => AssignmentStatement(),
-                        StatementType.AssertStatement => AssertStatement(),
-                        StatementType.PrintStatement => PrintStatement(),
-                        StatementType.ReadStatement => ReadStatement(),
-                        StatementType.ForStatement => ForStatement(),
-                        StatementType.VarStatement => VarStatement(),
-                        StatementType.NoOpStatement => NoOpStatement,
-                        StatementType.Type => Type(),
-                        StatementType.Expression => Expression(),
-                        StatementType.Operand => Operand(),
-                        StatementType.UnaryOperator => UnaryOperator(), // returns token
-                        _ => throw new Exception($"what? {match}")
-                    };
-                }
-                catch (SyntaxErrorException)
+                    _ when match is TokenType tt => MatchTokenType(tt),
+                    _ when match is KeywordType kwt => MatchKeywordType(kwt),
+                    _ when match is KeywordType[] kwts => MatchKeywordType(kwts),
+                    StatementType.Statement => Statement(),
+                    StatementType.StatementList => StatementList(),
+                    StatementType.StatementStatementList => StatementStatementList(),
+                    StatementType.DoEndBlock => DoEndBlock(),
+                    StatementType.AssignmentStatement => AssignmentStatement(),
+                    StatementType.AssertStatement => AssertStatement(),
+                    StatementType.PrintStatement => PrintStatement(),
+                    StatementType.ReadStatement => ReadStatement(),
+                    StatementType.ForStatement => ForStatement(),
+                    StatementType.VarStatement => VarStatement(),
+                    StatementType.NoOpStatement => NoOpStatement,
+                    StatementType.Type => Type(),
+                    StatementType.Expression => Expression(),
+                    StatementType.Operand => Operand(),
+                    StatementType.UnaryOperator => UnaryOperator(), // returns token
+                    _ => throw new Exception($"what? {match}")
+                };
+            }
+            catch (SyntaxErrorException)
+            {
+                Console.WriteLine(
+                    $"throwing with {match}"); //  - seq was {string.Join(", ", seq)}; matches so far {string.Join(", ", matches)}");
+                return match switch
                 {
-                    Console.WriteLine($"throwing with {match}"); //  - seq was {string.Join(", ", seq)}; matches so far {string.Join(", ", matches)}");
-                    return match switch
-                    {
-                        _ when match is TokenType => InputToken,
-                        _ when match is KeywordType => InputToken,
-                        _ when match is KeywordType[] => InputToken,
-                        StatementType.Type => PrimitiveType.Void,
-                        _ => NoOpStatement
-                    };
-                }
+                    _ when match is TokenType => InputToken,
+                    _ when match is KeywordType => InputToken,
+                    _ when match is KeywordType[] => InputToken,
+                    StatementType.Type => PrimitiveType.Void,
+                    _ => NoOpStatement
+                };
+            }
         }
-        
+
         private object[] MatchSequence(params object[] seq)
         {
             return seq.Select(Match).ToArray();
@@ -295,7 +296,7 @@ namespace Compiler.Parse
                 {
                     Token = id
                 },
-                Expression = expr
+                Expression = expr,
             };
         }
 
@@ -343,31 +344,17 @@ namespace Compiler.Parse
                 TokenType.Identifier
             ).Deconstruct(out Token token, out Token id);
 
-            /*CheckSymbol(id.Content, true);
-            var type = (PrimitiveType)_symbolTable.LookupType(id.Content);
-            _symbolTable.UpdateSymbol(id.Content, DefaultValue(type));
-                
-            if (CheckSymbol(id.Content, true))
-            {*/
-
-                return new StatementNode
+            return new StatementNode
+            {
+                Token = token,
+                Arguments = new List<Node>
                 {
-                    Token = token,
-                    Arguments = new List<Node>
+                    new VariableNode
                     {
-                        new VariableNode
-                        {
-                            Token = id
-                        }
+                        Token = id
                     }
-                };
-            /*}
-
-            // this is the error path
-            return (Node) Match(
-                StatementType.Statement
-            );*/
-
+                }
+            };
         }
 
         /*private bool CheckSymbol(string id, bool exists = false)
@@ -465,11 +452,12 @@ namespace Compiler.Parse
             var n = new AssignmentNode
             {
                 Token = token,
+                Type = type,
                 Id = new VariableNode
                 {
-                    Token = id
-                },
-                Type = type,
+                    Token = id,
+                    Type = type
+                }
             };
             if (InputTokenType == TokenType.Separator)
             {
@@ -485,15 +473,15 @@ namespace Compiler.Parse
                 out Node value
             );
 
-            if (value.Type != type)
+            /*if (value.Type != type)
             {
                 ParseError(ErrorType.TypeError,
                     value.Token,
                     $"type error: expected value of type {type}, got {value.Type}"
                 );
                 return n;
-            }
-            
+            }*/
+
             /*
             // TODO: get literal value or default - this to elsewhere
             _symbolTable.UpdateSymbol(id.Content, type switch
@@ -535,7 +523,7 @@ namespace Compiler.Parse
                 case TokenType.OpenParen:
                 {
                     var opnd1 = Operand();
-                    
+
                     if (InputTokenType != TokenType.Operator) return opnd1;
 
                     MatchSequence(
@@ -548,13 +536,13 @@ namespace Compiler.Parse
 
                     return new ExpressionNode
                     {
-                        Type = op.Content switch
+                        /*Type = op.Content switch
                         {
                             "<" => PrimitiveType.Bool,
                             "&" => PrimitiveType.Bool,
                             "=" => PrimitiveType.Bool,
                             _ => opnd1.Type
-                        },
+                        },*/
                         Token = opnd1.Token,
                         Expression = new BinaryNode
                         {
@@ -563,7 +551,6 @@ namespace Compiler.Parse
                             Right = opnd2
                         }
                     };
-
                 }
                 case TokenType.Operator:
                 {
@@ -585,6 +572,7 @@ namespace Compiler.Parse
                         Expression = new UnaryNode
                         {
                             Token = op,
+                            Type = opnd.Type,
                             Value = opnd
                         }
                     };
@@ -597,7 +585,7 @@ namespace Compiler.Parse
             return NoOpStatement;
         }
 
-        
+
         private Node Operand()
         {
             switch (InputTokenType)
@@ -606,29 +594,19 @@ namespace Compiler.Parse
                 case TokenType.StringValue:
                 case TokenType.BoolValue:
                 {
-                    var token = MatchTokenType(InputTokenType);
+                    var type = InputTokenType;
+                    var token = MatchTokenType(type);
                     return new LiteralNode
                     {
-                        Token = token
+                        Token = token,
+                        Type = TokenToPrimitiveType(type)
                     };
                 }
                 case TokenType.Identifier:
                 {
                     var token = MatchTokenType(TokenType.Identifier);
-                    /*CheckSymbol(token.Content, true);
-                    Console.WriteLine(_symbolTable.LookupSymbol(token.Content));
-                    var (type, value) = _symbolTable.LookupSymbol(token.Content);
-                    if (value == null)
-                    {
-                        ParseError(ErrorType.UninitializedVariable,
-                            token,
-                            $"variable {token.Content} used before value assignment"
-                        );
-                        return NoOpStatement;
-                    }*/
                     return new VariableNode
                     {
-                        // Type = type,
                         Token = token
                     };
                 }
@@ -639,14 +617,28 @@ namespace Compiler.Parse
                         MatchTokenType(TokenType.CloseParen)
                     );
                     return n;
+                case TokenType.Operator:
+                    MatchSequence(
+                        StatementType.UnaryOperator,
+                        StatementType.Operand
+                    ).Deconstruct(
+                        out Token op,
+                        out Node opnd
+                    );
+                    return new UnaryNode
+                    {
+                        Token = op,
+                        Type = opnd.Type,
+                        Value = opnd
+                    };
                 default:
-                    UnexpectedTokenError(OperandFirstTokens); 
+                    UnexpectedTokenError(OperandFirstTokens);
                     break;
             }
 
             return NoOpStatement; //Node.Of(NodeType.Unknown);
         }
-        
+
         private Token UnaryOperator() // TODO: this was a bit wonky 
         {
             if (MatchContent(UnaryOperators))
@@ -715,7 +707,8 @@ namespace Compiler.Parse
                 return true;
             }
 
-            ParseError(ErrorType.SyntaxError, InputToken, $"expected one of {string.Join(", ", sl)}, got {InputTokenContent}");
+            ParseError(ErrorType.SyntaxError, InputToken,
+                $"expected one of {string.Join(", ", sl)}, got {InputTokenContent}");
             return false;
         }
     }

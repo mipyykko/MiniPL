@@ -6,8 +6,8 @@ namespace Compiler.Parse
     public class Error
     {
         private ErrorType _errorType;
-        private string _message;
-        private Token _token;
+        private readonly string _message;
+        private readonly Token _token;
 
         private Error(ErrorType type, Token token, string message)
         {
@@ -24,17 +24,17 @@ namespace Compiler.Parse
             return _message;
         }
 
-        // public void Throw()
-        // {
-        //     var errorLine = _token.SourceInfo.LineRange.Line;
-        //     Console.WriteLine($"\nError: {_message} on line {errorLine}:");
-        //     for (var i = Math.Max(0, errorLine - 2); i < Math.Min(_source.Lines.Count, errorLine + 3); i++)
-        //     {
-        //         Console.WriteLine($"{i}: {_source.Lines[i]}");
-        //         
-        //     }
-        //     Environment.Exit(1);
-        //     
-        // }
+        public void Throw()
+        {
+            var errorLine = _token.SourceInfo.LineRange.Line;
+            Console.WriteLine($"\nError: {_message} on line {errorLine}:");
+            // for (var i = Math.Max(0, errorLine - 2); i < Math.Min(_source.Lines.Count, errorLine + 3); i++)
+            // {
+            //     Console.WriteLine($"{i}: {_source.Lines[i]}");
+            //     
+            // }
+            Environment.Exit(1);
+            
+        }
     }
 }

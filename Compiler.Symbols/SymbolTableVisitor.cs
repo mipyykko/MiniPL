@@ -3,12 +3,14 @@ using System.Linq;
 using Compiler.Common;
 using Compiler.Common.AST;
 using Compiler.Interpret;
+using static Compiler.Common.Util;
 
 namespace Compiler.Symbols
 {
     public class SymbolTableVisitor : Visitor
     {
-        private SymbolTable _symbolTable;
+        private readonly SymbolTable _symbolTable;
+        
         public SymbolTableVisitor(SymbolTable symbolTable)
         {
             _symbolTable = symbolTable;
@@ -16,7 +18,13 @@ namespace Compiler.Symbols
 
         public override object Visit(StatementNode node)
         {
-            node.Arguments.Select(n => n.Accept(this));
+            switch (node.Token.KeywordType)
+            {
+                case KeywordType.Print:
+                case KeywordType.Read:
+                case KeywordType.Assert:
+                    return node.Arguments[0].Accept(this);
+            }
             return null;
         }
 
@@ -29,35 +37,40 @@ namespace Compiler.Symbols
 
         public override object Visit(BinaryNode node)
         {
-            node.Left.Accept(this);
-            node.Right.Accept(this);
-            return null;
+            var type1 = (PrimitiveType) node.Left.Accept(this);
+            var type2 = (PrimitiveType) node.Right.Accept(this);
+
+            if (type1 != type2)
+            {
+                throw new Exception($"type error: can't perform operation {node.Token.Content} on {type1} and {type2}");
+            }
+
+            node.Type = type1;
+            return type1;
         }
 
         public override object Visit(UnaryNode node)
         {
-            node.Accept(this);
-            node.Value.Accept(this);
-            return null;
+            var type = (PrimitiveType) node.Value.Accept(this);
+            return type;
         }
 
         public override object Visit(AssignmentNode node)
         {
             var id = node.Id.Token.Content;
             var type = node.Type;
-            node.Expression.Accept(this);
+            var expressionType = node.Expression.Accept(this);
 
+            Console.WriteLine($"TYPE {type} EXPRESSION TYPE {node.Expression.Type} EXPRESSION {expressionType}");
             if (node.Token?.KeywordType != KeywordType.Var)
             {
+                Console.WriteLine($"not var assignment: type is {type}, symbol {_symbolTable.LookupSymbol(id)}");
                 if (!_symbolTable.SymbolExists(id))
                 {
                     throw new Exception($"variable {id} not declared");
                 }
 
-                if (_symbolTable.IsControlVariable(id))
-                {
-                    throw new Exception($"attempting to assign to control variable {id}");
-                }
+                type = _symbolTable.LookupSymbol(id);
             }
             else
             {
@@ -65,8 +78,19 @@ namespace Compiler.Symbols
                 {
                     throw new Exception($"attempting to redeclare variable {id}");
                 }
+                if (!(node.Expression is NoOpNode) && node.Expression.Type != node.Id.Type)
+                {
+                    throw new Exception($"type error: attempting to assign {node.Expression.Type} to variable {id} of type {node.Id.Type}");
+                }
             }
-            _symbolTable.DeclareSymbol(id, node.Type);
+            if (_symbolTable.IsControlVariable(id))
+            {
+                throw new Exception($"attempting to assign to control variable {id}");
+            }
+            _symbolTable.DeclareSymbol(id, type);
+
+            node.Type = type;
+            node.Id.Type = type;
 
             return null;
         }
@@ -80,18 +104,18 @@ namespace Compiler.Symbols
                 throw new Exception($"variable {id} not declared");   
             }
 
-            return null;
+            var type = _symbolTable.LookupSymbol(id);
+            node.Type = type;
+            return type;
         }
 
         public override object Visit(LiteralNode node)
         {
-            return null;
+            Console.WriteLine($"LITERAL {node.Token} {node.Type}");
+            return node.Type;
         }
 
-        public override object Visit(NoOpNode node)
-        {
-            return null;
-        }
+        public override object Visit(NoOpNode node) => PrimitiveType.Void;
 
         public override object Visit(ForNode node)
         {
@@ -112,8 +136,9 @@ namespace Compiler.Symbols
 
         public override object Visit(ExpressionNode node)
         {
-            node.Expression.Accept(this);
-            return null;
+            var type = node.Expression.Accept(this);
+            Console.WriteLine($"ExpressionNode got type {type}");
+            return type;
         }
     }
 }

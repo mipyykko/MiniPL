@@ -11,7 +11,7 @@ namespace Compiler.Common.AST
         
         public Node Parent { get; set; }
         public object Value { get; set; }
-        public Token Token { get; set; }
+        public abstract Token Token { get; set; }
         public abstract PrimitiveType Type { get; set; }
         public override string ToString()
         {
@@ -26,11 +26,6 @@ namespace Compiler.Common.AST
         }
     }
     
-    public abstract class OpNode : Node
-    {
-        public Token Op;
-    }
-    
     public class BinaryNode : Node
     {
         public override string Name => "BinaryOp";
@@ -38,6 +33,7 @@ namespace Compiler.Common.AST
         public Node Left;
         public Node Right;
         
+        public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
@@ -57,6 +53,7 @@ namespace Compiler.Common.AST
 
         public Node Expression;
 
+        public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; }
         public override object Accept(Visitor visitor) => visitor.Visit(this);
 
@@ -74,11 +71,10 @@ namespace Compiler.Common.AST
 
         public new Node Value; // TODO
 
-        public override PrimitiveType Type
-        {
-            get => Value.Type;
-            set => Type = value;
-        }
+        private PrimitiveType _type;
+
+        public override Token Token { get; set; } 
+        public override PrimitiveType Type { get; set; }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
         public override void AST(int depth = 0, string caller = "")
@@ -95,6 +91,7 @@ namespace Compiler.Common.AST
 
         public List<Node> Arguments { get; set; }
         
+        public override Token Token { get; set; } 
         public override PrimitiveType Type { get; set; } = PrimitiveType.Void;
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
@@ -116,6 +113,7 @@ namespace Compiler.Common.AST
         public override string Name => "NoOp";
 
         public override PrimitiveType Type { get; set; }
+        public override Token Token { get; set; } 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
         public override void AST(int depth = 0, string caller = "")
         {
@@ -130,23 +128,9 @@ namespace Compiler.Common.AST
     {
         public override string Name => "Variable";
 
-        private PrimitiveType _type;
+        public override PrimitiveType Type { get; set; }
 
-        public VariableNode()
-        {
-            _type = Token?.Type switch
-            {
-                TokenType.IntValue => PrimitiveType.Int,
-                TokenType.BoolValue => PrimitiveType.Bool,
-                TokenType.StringValue => PrimitiveType.String,
-                _ => PrimitiveType.Void
-            };
-
-        }
-        public override PrimitiveType Type {
-            get => _type;
-            set => _type = value;
-        } 
+        public override Token Token { get; set; } 
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
 
@@ -196,11 +180,8 @@ namespace Compiler.Common.AST
         public Node Left;
         public Node Right;
 
-        public override PrimitiveType Type
-        {
-            get => PrimitiveType.Void; 
-            set => Type = value; 
-        }
+        public override PrimitiveType Type { get; set; } = PrimitiveType.Void;
+        public override Token Token { get; set; }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
         public override void AST(int depth = 0, string caller = "")
@@ -217,20 +198,19 @@ namespace Compiler.Common.AST
     public class LiteralNode : Node
     {
         public override string Name => "Literal";
-        private PrimitiveType _type;
 
-        public override PrimitiveType Type
-        {
-            get => TokenToPrimitiveType(Token.Type); 
-            set => _type = value;
-        }
+        public override PrimitiveType Type { get; set; }
+        // {
+        //     get => TokenToPrimitiveType(Token.Type);
+        //     set => throw new Exception();     
+        // } 
+        public override Token Token { get; set; }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
         public override void AST(int depth = 0, string caller = "")
         {
-            Console.Write($"{Spaces(depth * 2)}[");
-            base.AST(depth);
-            Console.WriteLine($"\n{Spaces((depth + 1) * 2)}[{Token.Content}]");
+            Console.WriteLine($"{Spaces(depth * 2)}[{Name} {Type}");
+            Console.WriteLine($"{Spaces((depth + 1) * 2)}[{Token.Content}]");
             
             Console.WriteLine($"{Spaces(depth * 2)}]");
         }
@@ -245,7 +225,7 @@ namespace Compiler.Common.AST
         public Node Statements;           
 
         public override PrimitiveType Type { get => PrimitiveType.Void; set => throw new Exception(""); }
-
+        public override Token Token { get; set; }
         public override object Accept(Visitor visitor) => visitor.Visit(this);
         public override void AST(int depth = 0, string caller = "")
         {
@@ -258,15 +238,4 @@ namespace Compiler.Common.AST
             Console.WriteLine($"{Spaces(depth * 2)}]");
         }
     }
-    // public class NameNode : Node
-    // {
-    //     public string Name;
-    //
-    //     public NameNode()
-    //     {            
-    //     }
-    //
-    //     public override PrimitiveType Type { get; }
-    //     public override void Accept(Visitor visitor) { visitor.Visit(this); }
-    // }
 }
