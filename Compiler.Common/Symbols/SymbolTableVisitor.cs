@@ -2,29 +2,40 @@ using System;
 using System.Linq;
 using Compiler.Common;
 using Compiler.Common.AST;
+using Compiler.Common.Errors;
 using Compiler.Interpret;
 using static Compiler.Common.Util;
 
-namespace Compiler.Symbols
+namespace Compiler.Common
 {
     public class SymbolTableVisitor : Visitor
     {
-        private readonly SymbolTable _symbolTable;
-        
-        public SymbolTableVisitor(SymbolTable symbolTable)
-        {
-            _symbolTable = symbolTable;
-        }
+        private ISymbolTable SymbolTable => Context.SymbolTable;
+        private IErrorService ErrorService => Context.ErrorService;
 
         public override object Visit(StatementNode node)
         {
             switch (node.Token.KeywordType)
             {
                 case KeywordType.Print:
-                case KeywordType.Read:
                 case KeywordType.Assert:
                     return node.Arguments[0].Accept(this);
+                case KeywordType.Read:
+                    var id = ((VariableNode) node.Arguments[0]).Token.Content;
+
+                    if (SymbolTable.IsControlVariable(id))
+                    {
+                        ErrorService.Add(
+                            ErrorType.AssignmentToControlVariable, 
+                            node.Arguments[0].Token,
+                            $"can't assign read result to control variable {id}", 
+                            true
+                        );
+                    }
+
+                    return node.Arguments[0].Accept(this);
             }
+
             return null;
         }
 
@@ -42,7 +53,11 @@ namespace Compiler.Symbols
 
             if (type1 != type2)
             {
-                throw new Exception($"type error: can't perform operation {node.Token.Content} on {type1} and {type2}");
+                ErrorService.Add(
+                    ErrorType.TypeError, 
+                    node.Token,
+                    $"type error: can't perform operation {node.Token.Content} on {type1} and {type2}"
+                    );
             }
 
             node.Type = type1;
@@ -51,8 +66,7 @@ namespace Compiler.Symbols
 
         public override object Visit(UnaryNode node)
         {
-            var type = (PrimitiveType) node.Value.Accept(this);
-            return type;
+            return (PrimitiveType) node.Value.Accept(this);
         }
 
         public override object Visit(AssignmentNode node)
@@ -64,30 +78,49 @@ namespace Compiler.Symbols
             Console.WriteLine($"TYPE {type} EXPRESSION TYPE {node.Expression.Type} EXPRESSION {expressionType}");
             if (node.Token?.KeywordType != KeywordType.Var)
             {
-                Console.WriteLine($"not var assignment: type is {type}, symbol {_symbolTable.LookupSymbol(id)}");
-                if (!_symbolTable.SymbolExists(id))
+                Console.WriteLine($"not var assignment: type is {type}, symbol {SymbolTable.LookupSymbol(id)}");
+                if (!SymbolTable.SymbolExists(id))
                 {
-                    throw new Exception($"variable {id} not declared");
+                    ErrorService.Add(
+                        ErrorType.UndeclaredVariable, 
+                        node.Id.Token, 
+                        $"variable {id} not declared"
+                    );
                 }
 
-                type = _symbolTable.LookupSymbol(id);
+                type = SymbolTable.LookupSymbol(id);
             }
             else
             {
-                if (_symbolTable.SymbolExists(id))
+                if (SymbolTable.SymbolExists(id))
                 {
-                    throw new Exception($"attempting to redeclare variable {id}");
+                    ErrorService.Add(
+                        ErrorType.RedeclaredVariable, 
+                        node.Id.Token,
+                        $"attempting to redeclare variable {id}"
+                    );
                 }
+
                 if (!(node.Expression is NoOpNode) && node.Expression.Type != node.Id.Type)
                 {
-                    throw new Exception($"type error: attempting to assign {node.Expression.Type} to variable {id} of type {node.Id.Type}");
+                    ErrorService.Add(
+                        ErrorType.TypeError, 
+                        node.Id.Token,
+                        $"type error: attempting to assign {node.Expression.Type} {node.Expression.Token.Content} to variable {id} of type {node.Id.Type}"
+                    );
                 }
             }
-            if (_symbolTable.IsControlVariable(id))
+
+            if (SymbolTable.IsControlVariable(id))
             {
-                throw new Exception($"attempting to assign to control variable {id}");
+                ErrorService.Add(
+                    ErrorType.AssignmentToControlVariable, 
+                    node.Id.Token,
+                    $"attempting to assign to control variable {id}"
+                );
             }
-            _symbolTable.DeclareSymbol(id, type);
+
+            SymbolTable.DeclareSymbol(id, type);
 
             node.Type = type;
             node.Id.Type = type;
@@ -99,12 +132,16 @@ namespace Compiler.Symbols
         {
             var id = node.Token.Content;
 
-            if (!_symbolTable.SymbolExists(id))
+            if (!SymbolTable.SymbolExists(id))
             {
-                throw new Exception($"variable {id} not declared");   
+                ErrorService.Add(
+                    ErrorType.UndeclaredVariable,
+                    node.Token,
+                    $"variable {id} not declared"
+                );
             }
 
-            var type = _symbolTable.LookupSymbol(id);
+            var type = SymbolTable.LookupSymbol(id);
             node.Type = type;
             return type;
         }
@@ -123,13 +160,9 @@ namespace Compiler.Symbols
             node.RangeStart.Accept(this);
             node.RangeEnd.Accept(this);
 
-            if (_symbolTable.LookupSymbol(id) == null)
-            {
-                throw new Exception($"variable {id} not declared");
-            }
-            _symbolTable.SetControlVariable(id);
+            SymbolTable.SetControlVariable(id);
             node.Statements.Accept(this);
-            _symbolTable.UnsetControlVariable(id);
+            SymbolTable.UnsetControlVariable(id);
 
             return null;
         }

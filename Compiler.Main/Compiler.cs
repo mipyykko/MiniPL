@@ -1,9 +1,10 @@
 ﻿using System;
+using Compiler.Common;
+using Compiler.Common.Errors;
 using Compiler.Interpret;
 using Compiler.Scan;
 using Text = Compiler.Common.Text;
 using Compiler.Parse;
-using Compiler.Symbols;
 
 namespace Compiler.Main
 {
@@ -11,23 +12,20 @@ namespace Compiler.Main
     {
         public Compiler(string source)
         {
-            var sourceText = Text.Of(source);
-            var scanner = new Scanner(sourceText);
+            Context.Source = Text.Of(source);
+            Context.ErrorService = new ErrorService();
+            Context.SymbolTable = new SymbolTable();
+            
+            var scanner = new Scanner();
             var parser = new Parser(scanner);
             var tree = parser.Program();
-            var symbolTable = new SymbolTable();
-            var symbolTableVisitor = new SymbolTableVisitor(symbolTable);
+            var symbolTableVisitor = new SymbolTableVisitor();
             tree.Accept(symbolTableVisitor);
             
             tree.AST();
-            if (parser.Errors.Count > 0)
-            {
-                foreach (var error in parser.Errors)
-                {
-                    Console.WriteLine(error);
-                }
-            }
-            new Interpreter(tree, sourceText, symbolTable);
+            new Interpreter(tree);
+            
+            Context.ErrorService.Throw();
         }
     }
 }

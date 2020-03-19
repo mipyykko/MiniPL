@@ -5,9 +5,9 @@ using System.Runtime.InteropServices.ComTypes;
 using Compiler.Common;
 using static Compiler.Common.Util;
 
-namespace Compiler.Symbols
+namespace Compiler.Common
 {
-    public class SymbolTable
+    public class SymbolTable : ISymbolTable
     {
         private Dictionary<string, PrimitiveType> _symbols = new Dictionary<string, PrimitiveType>();
         private Dictionary<string, bool> _controlVariables = new Dictionary<string, bool>();
@@ -28,7 +28,7 @@ namespace Compiler.Symbols
         {
             if (!_symbols.ContainsKey(id))
             {
-                throw new Exception("undeclared variable");
+                return PrimitiveType.Void;
                 // return ErrorType.UndeclaredVariable; // TODO: throw exceptions or smth
             }
 

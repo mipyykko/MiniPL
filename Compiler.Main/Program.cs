@@ -7,7 +7,7 @@ namespace Compiler.Main
         public static void Main(string[] args)
         {
             var test1 =
-                $@"var nTimes : int := 0;;
+                $@"var nTimes : int := 0;
 // this is a line comment
 // and this 
     print ""How many times ?"";
@@ -38,7 +38,7 @@ for i in 1..n do
 end for;
 print ""The result is: "";
 print v;";
-            var c = new Compiler(test3);
+            var c = new Compiler(test1);
         }
     }
 }

@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using Compiler.Common;
 using Compiler.Common.AST;
-using Compiler.Symbols;
+using Compiler.Common.Errors;
 using Compiler.Scan;
 using Node = Compiler.Common.AST.Node;
 using StatementType = Compiler.Common.StatementType;
@@ -17,25 +16,24 @@ namespace Compiler.Parse
 {
     public class Parser
     {
-        private List<Error> errors = new List<Error>();
-        private readonly Scanner scanner;
-        private Token InputToken;
+        private Text Source => Context.Source;
+        private IErrorService ErrorService => Context.ErrorService;
+        private readonly Scanner _scanner;
+        private Token _inputToken;
 
         // private Node tree;
         private bool DoBlock { get; set; }
 
-        private KeywordType InputTokenKeywordType => InputToken.KeywordType;
-        private TokenType InputTokenType => InputToken.Type;
-        private string InputTokenContent => InputToken.Content;
+        private KeywordType InputTokenKeywordType => _inputToken.KeywordType;
+        private TokenType InputTokenType => _inputToken.Type;
+        private string InputTokenContent => _inputToken.Content;
 
         private static readonly Node NoOpStatement = new NoOpNode();
 
         public Parser(Scanner scanner)
         {
-            this.scanner = scanner;
+            this._scanner = scanner;
         }
-
-        public List<Error> Errors => errors;
 
         private void ParseError(ErrorType type, Token errorToken, string message)
         {
@@ -43,11 +41,12 @@ namespace Compiler.Parse
             sb.Append(message);
             var errorMessage = sb.ToString();
             Console.WriteLine(errorMessage);
-            errors.Add(Error.Of(type, errorToken, errorMessage));
+            ErrorService.Add(type, errorToken, errorMessage);
+            
             throw new SyntaxErrorException(errorMessage);
         }
 
-        private string GetLine(Token t) => scanner.Text.Lines[t.SourceInfo.LineRange.Line];
+        private string GetLine(Token t) => Source.Lines[t.SourceInfo.LineRange.Line];
 
         private string GetErrorPosition(Token t) => new string(' ', Math.Max(0, t.SourceInfo.LineRange.Start))
                                                     + new string('^', Math.Max(1, t.Content.Length));
@@ -64,7 +63,7 @@ namespace Compiler.Parse
                     $"expected one of keyword types {string.Join(", ", kwts)}, got {InputTokenContent} of type {InputTokenKeywordType}"
                 }
             );
-            var errorToken = InputToken;
+            var errorToken = _inputToken;
             SkipToTokenType(TokenType.Separator);
             ParseError(ErrorType.UnexpectedKeyword, errorToken, sb.ToString());
         }
@@ -82,14 +81,13 @@ namespace Compiler.Parse
                     $"expected one of token types {string.Join(", ", tts)}, got {InputTokenContent} of type {InputTokenType}"
                 }
             );
-            var errorToken = InputToken;
+            var errorToken = _inputToken;
             SkipToTokenType(TokenType.Separator);
             ParseError(ErrorType.UnexpectedToken, errorToken, sb.ToString());
         }
 
-        private void NextToken() => InputToken = scanner.GetNextToken();
-
-
+        private void NextToken() => _inputToken = _scanner.GetNextToken();
+        
         private KeywordType[] StatementFirstKeywords =>
             DoBlock
                 ? DoBlockStatementFirstKeywords
@@ -109,7 +107,7 @@ namespace Compiler.Parse
             return new StatementListNode
             {
                 Left = statements,
-                Right = new NoOpNode()
+                Right = NoOpStatement
             };
         }
 
@@ -137,7 +135,10 @@ namespace Compiler.Parse
                     StatementType.Expression => Expression(),
                     StatementType.Operand => Operand(),
                     StatementType.UnaryOperator => UnaryOperator(), // returns token
-                    _ => throw new Exception($"what? {match}")
+                    _ => ErrorService.Add(
+                        ErrorType.InvalidOperation,
+                        _inputToken,
+                        $"tried to match unknown token ${match}")
                 };
             }
             catch (SyntaxErrorException)
@@ -146,9 +147,9 @@ namespace Compiler.Parse
                     $"throwing with {match}"); //  - seq was {string.Join(", ", seq)}; matches so far {string.Join(", ", matches)}");
                 return match switch
                 {
-                    _ when match is TokenType => InputToken,
-                    _ when match is KeywordType => InputToken,
-                    _ when match is KeywordType[] => InputToken,
+                    _ when match is TokenType => _inputToken,
+                    _ when match is KeywordType => _inputToken,
+                    _ when match is KeywordType[] => _inputToken,
                     StatementType.Type => PrimitiveType.Void,
                     _ => NoOpStatement
                 };
@@ -278,18 +279,6 @@ namespace Compiler.Parse
                 out Node expr
             );
 
-            /*CheckSymbol(id.Content, true);
-            var type = _symbolTable.LookupType(id.Content);
-            
-            if (expr.Type != type)
-            {
-                ParseError(ErrorType.TypeError,
-                    expr.Token,
-                    $"type error: expected value of type {type}, got {expr.Type}"
-                );
-                return NoOpStatement;
-            }*/
-
             return new AssignmentNode
             {
                 Id = new VariableNode
@@ -356,31 +345,7 @@ namespace Compiler.Parse
                 }
             };
         }
-
-        /*private bool CheckSymbol(string id, bool exists = false)
-        {
-            if (exists && _symbolTable.SymbolExists(id)) return true;
-            if (!exists && !_symbolTable.SymbolExists(id)) return true;
-
-            var errorToken = InputToken;
-            // SkipToTokenType(TokenType.Separator);
-
-            if (exists)
-            {
-                ParseError(ErrorType.UndeclaredVariable,
-                    errorToken,
-                    $"variable {id} not declared");
-            }
-            else
-            {
-                ParseError(ErrorType.RedeclaredVariable,
-                    errorToken,
-                    $"variable {id} already declared");
-            }
-
-            return false;
-        }*/
-
+        
         private Node ForStatement()
         {
             MatchSequence(
@@ -389,37 +354,19 @@ namespace Compiler.Parse
                 KeywordType.In,
                 StatementType.Expression,
                 TokenType.Range,
-                StatementType.Expression
+                StatementType.Expression,
+                StatementType.DoEndBlock,
+                KeywordType.For
             ).Deconstruct(
                 out Token _,
                 out Token id,
                 out Token __,
                 out Node rangeStart,
                 out Token ___,
-                out Node rangeEnd
-            );
-            /*CheckSymbol(id.Content, true);
-
-            var type = (PrimitiveType) _symbolTable.LookupType(id.Content);
-            _symbolTable.SetControlVariable(id.Content);
-            // TODO: update to initial literal or this
-            _symbolTable.UpdateControlVariable(id.Content, type switch
-            {
-                PrimitiveType.Bool => "false",
-                PrimitiveType.Int => "0",
-                PrimitiveType.String => "",
-                _ => null
-            });*/
-
-            MatchSequence(
-                StatementType.DoEndBlock,
-                KeywordType.For
-            ).Deconstruct(
+                out Node rangeEnd,
                 out Node statements,
-                out Token _
+                out Token ____
             );
-
-            // _symbolTable.UnsetControlVariable(id.Content);
 
             return new ForNode
             {
@@ -443,11 +390,6 @@ namespace Compiler.Parse
                 out Token _,
                 out PrimitiveType type
             );
-
-            /*
-            CheckSymbol(id.Content, false);
-            _symbolTable.DeclareSymbol(id.Content, type); // TODO: error
-            */
 
             var n = new AssignmentNode
             {
@@ -473,25 +415,6 @@ namespace Compiler.Parse
                 out Node value
             );
 
-            /*if (value.Type != type)
-            {
-                ParseError(ErrorType.TypeError,
-                    value.Token,
-                    $"type error: expected value of type {type}, got {value.Type}"
-                );
-                return n;
-            }*/
-
-            /*
-            // TODO: get literal value or default - this to elsewhere
-            _symbolTable.UpdateSymbol(id.Content, type switch
-            {
-                PrimitiveType.Bool => "false",
-                PrimitiveType.Int => 0,
-                PrimitiveType.String => "",
-                _ => null
-            }); // TODO: error
-            */
             n.Expression = value;
             return n;
         }
@@ -536,13 +459,6 @@ namespace Compiler.Parse
 
                     return new ExpressionNode
                     {
-                        /*Type = op.Content switch
-                        {
-                            "<" => PrimitiveType.Bool,
-                            "&" => PrimitiveType.Bool,
-                            "=" => PrimitiveType.Bool,
-                            _ => opnd1.Type
-                        },*/
                         Token = opnd1.Token,
                         Expression = new BinaryNode
                         {
@@ -646,12 +562,12 @@ namespace Compiler.Parse
                 return MatchTokenType(TokenType.Operator);
             }
 
-            return InputToken; // TODO: hmm
+            return _inputToken; // TODO: hmm
         }
 
         private Token MatchTokenType(TokenType tt)
         {
-            var matchedToken = InputToken;
+            var matchedToken = _inputToken;
             if (InputTokenType == tt)
             {
                 NextToken();
@@ -666,7 +582,7 @@ namespace Compiler.Parse
 
         private Token MatchKeywordType(KeywordType kwt)
         {
-            var matchedToken = InputToken;
+            var matchedToken = _inputToken;
             if (InputTokenKeywordType == kwt)
             {
                 NextToken();
@@ -680,7 +596,7 @@ namespace Compiler.Parse
 
         private Token MatchKeywordType(KeywordType[] kwtl)
         {
-            var matchedToken = InputToken;
+            var matchedToken = _inputToken;
             foreach (var kwt in kwtl)
                 if (InputTokenKeywordType == kwt)
                 {
@@ -696,18 +612,18 @@ namespace Compiler.Parse
         private bool MatchContent(string s)
         {
             if (InputTokenContent.Equals(s)) return true;
-            ParseError(ErrorType.SyntaxError, InputToken, $"expected {s}, got {InputTokenContent}");
+            ParseError(ErrorType.SyntaxError, _inputToken, $"expected {s}, got {InputTokenContent}");
             return false;
         }
 
-        public bool MatchContent(string[] sl)
+        private bool MatchContent(string[] sl)
         {
             if (sl.Any(InputTokenContent.Equals))
             {
                 return true;
             }
 
-            ParseError(ErrorType.SyntaxError, InputToken,
+            ParseError(ErrorType.SyntaxError, _inputToken,
                 $"expected one of {string.Join(", ", sl)}, got {InputTokenContent}");
             return false;
         }

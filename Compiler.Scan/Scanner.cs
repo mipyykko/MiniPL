@@ -2,24 +2,20 @@
 using System.Collections.Generic;
 using System.Text;
 using Compiler.Common;
+using Compiler.Common.Errors;
 
 namespace Compiler.Scan
 {
     public class Scanner
     {
-        public Text Text { get; private set; }
+        private Text Source => Context.Source;
+        private IErrorService ErrorService => Context.ErrorService;
         private int _startPos;
         private int _startLinePos;
 
-        private char Current => Text.Current;
-        private char Peek => Text.Peek;
-        private string NextTwo => Text.NextTwo;
-        private bool IsExhausted => Text.IsExhausted;
-        
-        public Scanner(Text text)
-        {
-            Text = text;
-        }
+        private char Current => Source.Current;
+        private char Peek => Source.Peek;
+        private bool IsExhausted => Source.IsExhausted;
 
         private (int Start, int End) TokenRange(string token)
         {
@@ -28,7 +24,7 @@ namespace Compiler.Scan
 
         private (int Line, int Start, int End) TokenLineRange(string token)
         {
-            return (Text.Line, _startLinePos, _startLinePos + Math.Max(0, token.Length - 1));
+            return (Source.Line, _startLinePos, _startLinePos + Math.Max(0, token.Length - 1));
         }
 
         private SourceInfo GetSourceInfo(string token)
@@ -41,12 +37,12 @@ namespace Compiler.Scan
 
         public Token GetNextToken()
         {
-            Text.SkipSpacesAndComments();
+            Source.SkipSpacesAndComments();
 
             if (IsExhausted) return Token.Of(TokenType.EOF, GetSourceInfo(""));
 
-            _startPos = Text.Pos;
-            _startLinePos = Text.LinePos;
+            _startPos = Source.Pos;
+            _startLinePos = Source.LinePos;
             var (tokenType, token) = GetTrivialToken();
 
             switch (tokenType)
@@ -81,10 +77,10 @@ namespace Compiler.Scan
                 return (TokenType.Unknown, $"{Current}");
 
             foreach (var token in Token.TrivialTokenTypes.Keys)
-                if (Text.Pos + token.Length <= Text.End &&
-                    Text.Range(Text.Pos, token.Length).ToLower().Equals(token.ToLower()))
+                if (Source.Pos + token.Length <= Source.End &&
+                    Source.Range(Source.Pos, token.Length).ToLower().Equals(token.ToLower()))
                 {
-                    Text.Advance(token.Length);
+                    Source.Advance(token.Length);
                     return (Token.TrivialTokenTypes[token], token);
                 }
 
@@ -95,11 +91,11 @@ namespace Compiler.Scan
         {
             var kw = new StringBuilder("");
 
-            while (!Text.IsExhausted && " \t\n".IndexOf(Current) < 0 && (char.IsLetter(Current) || 
-                                                                         char.IsDigit(Current) || Current == '_'))
+            while (!Source.IsExhausted && " \t\n".IndexOf(Current) < 0 && (char.IsLetter(Current) ||
+                                                                           char.IsDigit(Current) || Current == '_'))
             {
                 kw.Append(Current);
-                Text.Advance();
+                Source.Advance();
             }
 
             return kw.ToString();
@@ -109,66 +105,85 @@ namespace Compiler.Scan
         {
             var n = new StringBuilder("");
 
-            while (!Text.IsExhausted && Text.IsDigit(Current))
+            while (!Source.IsExhausted && Text.IsDigit(Current))
             {
                 n.Append(Current);
-                Text.Advance();
+                Source.Advance();
             }
 
             return n.ToString();
         }
 
-        private Dictionary<char, string> Literals = new Dictionary<char,string>()
+        private Dictionary<char, string> Literals = new Dictionary<char, string>()
         {
             ['n'] = "\n",
             ['t'] = "\t",
             ['\\'] = "\\"
         };
-        
+
         private string GetStringContents()
         {
             var str = new StringBuilder();
 
             string error = null;
 
-            while (!Text.IsExhausted)
+            while (!Source.IsExhausted)
             {
                 var peekedLiteral = Literals.TryGetValueOrDefault(Peek);
 
                 switch (Current)
                 {
                     case '"':
-                        // TODO: what to do with error?
-                        Text.Advance();
+                        Source.Advance();
                         return str.ToString();
                     case '\\' when peekedLiteral == null && Text.IsDigit(Peek):
-                        int numberValue = short.Parse(GetNumberContents());
-                        str.Append(Convert.ToChar(numberValue));
-                        Text.Advance();
+                        Source.Advance();
+                        var number = GetNumberContents();
+                        try
+                        {
+                            int numberValue = short.Parse(number);
+                            str.Append(Convert.ToChar(numberValue));
+                        }
+                        catch
+                        {
+                            ErrorService.Add(
+                                ErrorType.SyntaxError,
+                                Token.Of(
+                                    TokenType.Unknown,
+                                    SourceInfo.Of(TokenRange($"{Current}"), TokenLineRange($"{Current}"))),
+                                $"unknown special character \\{number}"
+                            );
+                        }
                         break;
                     case '\\' when peekedLiteral == null:
-                        error = $"unknown special character \\{Peek} at {Text.Pos}";
-                        Text.Advance();
+                        ErrorService.Add(
+                            ErrorType.SyntaxError,
+                            Token.Of(
+                                TokenType.Unknown,
+                                SourceInfo.Of(TokenRange($"{Current}"), TokenLineRange($"{Current}"))),
+                            $"unknown special character \\{Peek}"
+                        );
+                        Source.Advance();
                         break;
                     case '\\':
                         str.Append(peekedLiteral);
-                        Text.Advance(2);
+                        Source.Advance(2);
                         break;
                     default:
                         str.Append(Current);
-                        Text.Advance();
+                        Source.Advance();
                         break;
                 }
             }
 
-            throw new Exception("unterminated string terminal");
-            // if (error != null)
-            // {
-            //    // or add to error list
-            //    throw new Exception(String.Format("Error: {0} in {1}", error, str));
-            //}
-            //text.Advance();
-            //return str.ToString();
+            ErrorService.Add(
+                ErrorType.UnterminatedStringTerminal,
+                Token.Of(
+                    TokenType.Unknown,
+                    SourceInfo.Of(TokenRange($"{Current}"), TokenLineRange($"{Current}"))),
+                $"unterminated string terminal",
+                true);
+            return "";
         }
     }
 }

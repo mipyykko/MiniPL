@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Data;
+using Compiler.Common;
+using Compiler.Common.Errors;
 using NUnit.Framework;
 using FluentAssertions;
 using Text = Compiler.Common.Text;
+using Moq;
 
 namespace Compiler.Tests
 {
@@ -91,11 +94,19 @@ not     skipping
         [Test()]
         public void RunawayCommentTest()
         {
+            var errorService = new Mock<IErrorService>();
+            Context.ErrorService = errorService.Object;
+            
             var text = Text.Of("/* asdf\nhas no end");
+            
+            text.SkipSpacesAndComments();
 
-            Action throwingAct = () => text.SkipSpacesAndComments();
-
-            throwingAct.Should().Throw<SyntaxErrorException>();
+            errorService.Verify(es => es.Add(
+                It.Is<ErrorType>(e => e == ErrorType.SyntaxError),
+                It.IsAny<Token>(),
+                It.IsAny<string>(),
+                true), Times.Once
+            );
         }
 
         [Test()]

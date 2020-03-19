@@ -6,6 +6,7 @@ namespace Compiler.Common
         SyntaxError,
         ParseError,
         TypeError,
+        AssertionError,
         UnexpectedKeyword,
         UnexpectedToken,
         UndeclaredVariable,
@@ -13,6 +14,7 @@ namespace Compiler.Common
         UninitializedVariable,
         AssignmentToControlVariable,
         InvalidRange,
-        InvalidOperation
+        InvalidOperation,
+        UnterminatedStringTerminal
     }
 }

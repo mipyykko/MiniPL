@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using Compiler.Common.Errors;
 
 namespace Compiler.Common
 {
     public class Text
     {
+        private IErrorService ErrorService => Context.ErrorService;
         private readonly string text;
         public int End { get; private set; }
         public List<string> Lines { get; private set; }
@@ -74,6 +76,9 @@ namespace Compiler.Common
         {
             SkipSpaces();
             var done = false;
+            var startPos = Pos;
+            var startLine = Line;
+            var startLinePos = LinePos;
 
             while (!done && !IsExhausted)
             {
@@ -95,7 +100,16 @@ namespace Compiler.Common
                             Advance();
                             if (!IsExhausted) continue;
 
-                            throw new SyntaxErrorException("runaway comment");
+                            ErrorService.Add(
+                                ErrorType.SyntaxError,
+                                Token.Of(
+                                    TokenType.Unknown,
+                                    SourceInfo.Of(
+                                        (startPos, Pos),
+                                        (startLine, startLinePos, Pos
+                                        ))),
+                                "runaway comment",
+                                true);
                         }
 
                         Advance(2);

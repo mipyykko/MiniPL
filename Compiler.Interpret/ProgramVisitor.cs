@@ -1,26 +1,22 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using Compiler.Common;
 using Compiler.Common.AST;
-using Compiler.Symbols;
-using Node = Compiler.Common.AST.Node;
+using Compiler.Common.Errors;
 using static Compiler.Common.Util;
 
 namespace Compiler.Interpret
 {
     public class ProgramVisitor : Visitor
     {
-        private Text _source;
+        private Text Source => Context.Source;
+        private IErrorService ErrorService => Context.ErrorService;
+        private ISymbolTable SymbolTable => Context.SymbolTable;
         private ProgramMemory _memory;
-        private SymbolTable _symbolTable;
-        
-        public ProgramVisitor(SymbolTable symbolTable, Text source)
+
+        public ProgramVisitor()
         {
-            _symbolTable = symbolTable;
-            _memory = new ProgramMemory(_symbolTable);
-            _source = source;
+            _memory = new ProgramMemory();
         }
 
         public override object Visit(StatementNode node)
@@ -34,7 +30,12 @@ namespace Compiler.Interpret
                     var result = (bool) node.Arguments[0].Accept(this);
                     if (result != true)
                     {
-                        throw new Exception("assertion failed");
+                        ErrorService.Add(
+                            ErrorType.AssertionError, 
+                            node.Token, 
+                            $"assertion failed: {node.Arguments[0].Representation()}",
+                        true
+                        );
                     }
 
                     break;
@@ -43,7 +44,21 @@ namespace Compiler.Interpret
                     var id = ((VariableNode) node.Arguments[0]).Token.Content;
                     var value = Console.ReadLine();
 
-                    _memory.UpdateVariable(id, value);
+                    var errorType = _memory.UpdateVariable(id, value);
+
+                    switch (errorType)
+                    {
+                        case ErrorType.TypeError:
+                            ErrorService.Add(
+                                errorType, 
+                                node.Arguments[0].Token, 
+                                $"type error: expected {SymbolTable.LookupSymbol(id)}, got {GuessType(value)}", 
+                                true);
+                            break;
+                        default:
+                            break;
+                    }
+
                     break;
                 }
             }
@@ -54,23 +69,27 @@ namespace Compiler.Interpret
         public override object Visit(ForNode node)
         {
             var id = node.Token.Content;
-            var rangeStart = node.RangeStart.Accept(this);
-            var rangeEnd = node.RangeEnd.Accept(this);
+            var rangeStart = (int) node.RangeStart.Accept(this);
+            var rangeEnd = (int) node.RangeEnd.Accept(this);
 
-            _symbolTable.SetControlVariable(id);
+            var direction = rangeStart <= rangeEnd ? 1 : -1;
 
-            _memory.UpdateControlVariable(id, (int) rangeStart);
+            SymbolTable.SetControlVariable(id);
 
-            var i = (int) rangeStart;
+            _memory.UpdateControlVariable(id, rangeStart);
 
-            while (i <= (int) rangeEnd)
+            bool Condition(int i) => direction > 0 ? i <= rangeEnd : i >= rangeEnd;
+
+            var i = rangeStart;
+
+            while (Condition(i))
             {
                 node.Statements.Accept(this);
-                i++;
+                i += direction;
                 _memory.UpdateControlVariable(id, i);
             }
 
-            _symbolTable.UnsetControlVariable(id);
+            SymbolTable.UnsetControlVariable(id);
 
             return null;
         }
@@ -133,9 +152,11 @@ namespace Compiler.Interpret
                 case OperatorType.Equals:
                     return opnd1.Equals(opnd2);
                 default:
-                    ThrowError(ErrorType.InvalidOperation,
-                        node,
-                        $"invalid operation ${op}");
+                    ErrorService.Add(
+                        ErrorType.InvalidOperation, 
+                        node.Token, 
+                    $"invalid operation ${op}"
+                    );
                     break;
             }
 
@@ -148,9 +169,11 @@ namespace Compiler.Interpret
             {
                 "-" => (object) -(int) node.Value.Accept(this),
                 "!" => !(bool) node.Value.Accept(this),
-                _ => ThrowError(ErrorType.InvalidOperation,
-                        node,
-                        $"invalid unary operator {node.Token.Content}")
+                _ => ErrorService.Add(
+                        ErrorType.InvalidOperation, 
+                        node.Token,
+                    $"invalid unary operator {node.Token.Content}"
+                    )
             };
         }
 
@@ -173,30 +196,12 @@ namespace Compiler.Interpret
         public override object Visit(VariableNode node)
         {
             var id = node.Token.Content;
-            if (!_symbolTable.SymbolExists(id))
+            if (!SymbolTable.SymbolExists(id))
             {
-                ThrowError(ErrorType.UndeclaredVariable,
-                    node,
-                    $"{id} not declared");
+                ErrorService.Add(ErrorType.UndeclaredVariable, node.Token, $"{id} not declared");
             }
 
             return _memory.LookupVariable(id);
         }
-        
-        private object ThrowError(ErrorType type, Node node, string message)
-        {
-            var errorLine = node.Token.SourceInfo.LineRange.Line;
-            Console.WriteLine($"\nError: {message} on line {errorLine}:");
-            for (var i = Math.Max(0, errorLine - 2); i < Math.Min(_source.Lines.Count, errorLine + 3); i++)
-            {
-                Console.WriteLine($"{i}: {_source.Lines[i]}");
-                
-            }
-            Environment.Exit(1);
-
-            return null; // we'll never get here, but anyway
-        }
-
-
     }
 }

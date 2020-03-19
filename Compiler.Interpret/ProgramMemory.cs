@@ -1,38 +1,39 @@
 using System;
 using System.Collections.Generic;
 using Compiler.Common;
-using Compiler.Symbols;
-using static Compiler.Common.Util;
 
 namespace Compiler.Interpret
 {
     internal class ProgramMemory
     {
         private readonly Dictionary<string, object> _memory = new Dictionary<string, object>();
-        private readonly SymbolTable _symbolTable;
-
-        public ProgramMemory(SymbolTable symbolTable)
-        {
-            _symbolTable = symbolTable;
-        }
+        private ISymbolTable SymbolTable => Context.SymbolTable;
         
         public ErrorType UpdateVariable(string id, object value = null, bool control = false)
         {
-            if (!control && _symbolTable.IsControlVariable(id))
+            if (!control && SymbolTable.IsControlVariable(id))
             {
                 return ErrorType.AssignmentToControlVariable;
             }
 
-            _memory[id] = ParseResult((PrimitiveType) _symbolTable.LookupSymbol(id), value); // TODO: error?
+            try
+            {
+                _memory[id] = ParseResult((PrimitiveType) SymbolTable.LookupSymbol(id), value); // TODO: error?
+            }
+            catch (Exception)
+            {
+                return ErrorType.TypeError;
+            }
+
             return ErrorType.Unknown;
         }
 
         public ErrorType UpdateControlVariable(string id, object value)
         {
-            if (!_symbolTable.IsControlVariable(id) || !_symbolTable.SymbolExists(id))
-            {
-                return ErrorType.AssignmentToControlVariable; // TODO
-            }
+            // if (!_symbolTable.IsControlVariable(id) || !_symbolTable.SymbolExists(id))
+            // {
+            //     return ErrorType.AssignmentToControlVariable; // TODO
+            // }
             return UpdateVariable(id, value, true);
         }
 
@@ -50,8 +51,8 @@ namespace Compiler.Interpret
         public object ParseResult(PrimitiveType type, object value)
         {
 
-            try
-            {
+            // try
+            // {
                 return type switch
                 {
                     PrimitiveType.Int when value is string s => int.Parse(s),
@@ -59,14 +60,19 @@ namespace Compiler.Interpret
                     PrimitiveType.Bool when value is string s => s.ToLower().Equals("true"),
                     _ => value
                 };
-            }
+            /*}
             catch (Exception)
             {
                 // TODO: error?
+                ErrorService.Add(Error.Of(
+                        ErrorType.TypeError,
+                        
+                        )
+                    )
                 throw new Exception($"type error: expected {type}, got {GuessType((string) value)}");
                 return null;
                 
-            }
+            }*/
         }
     }
 }

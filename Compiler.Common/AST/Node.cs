@@ -8,11 +8,12 @@ namespace Compiler.Common.AST
     public abstract class Node
     {
         public virtual string Name => "Node";
-        
+
         public Node Parent { get; set; }
         public object Value { get; set; }
         public abstract Token Token { get; set; }
         public abstract PrimitiveType Type { get; set; }
+
         public override string ToString()
         {
             return $"{Type} {Value}";
@@ -20,24 +21,27 @@ namespace Compiler.Common.AST
 
         public abstract object Accept(Visitor visitor);
 
-        public virtual void AST(int depth = 0, string caller = "")
+        public virtual void AST(int depth = 0)
         {
             Console.Write($"{Name}");
         }
+
+        public virtual string Representation() => $"{Token.Content}";
     }
-    
+
     public class BinaryNode : Node
     {
         public override string Name => "BinaryOp";
 
         public Node Left;
         public Node Right;
-        
+
         public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        public override void AST(int depth = 0, string caller = "")
+
+        public override void AST(int depth = 0)
         {
             // Console.Write($"{Spaces(depth * 2)}[");
             Console.WriteLine($"{Name} {Token.Content}");
@@ -45,6 +49,8 @@ namespace Compiler.Common.AST
             Right.AST(depth + 1);
             Console.WriteLine($"{Spaces(depth * 2)}]");
         }
+
+        public override string Representation() => $"{Left.Representation()} {Token.Content} {Right.Representation()}";
     }
 
     public class ExpressionNode : Node
@@ -57,45 +63,54 @@ namespace Compiler.Common.AST
         public override PrimitiveType Type { get; set; }
         public override object Accept(Visitor visitor) => visitor.Visit(this);
 
-        public override void AST(int depth = 0, string caller = "")
+        public override void AST(int depth = 0)
         {
             // base.AST(depth, "expressionnode");
             Console.Write($"{Spaces(depth * 2)}[");
             Expression.AST(depth);
         }
+
+        public override string Representation() => Expression.Representation();
     }
 
     public class UnaryNode : Node
     {
         public override string Name => "UnaryOp";
 
-        public new Node Value; // TODO
+        public new Node Value;
 
         private PrimitiveType _type;
 
-        public override Token Token { get; set; } 
+        public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        public override void AST(int depth = 0, string caller = "")
+
+        public override void AST(int depth = 0)
         {
             Console.Write($"{Name} {Token.Content}");
             Value.AST(depth + 1);
         }
+
+        public override string Representation()
+        {
+            return $"{Token.Content}{Value.Representation()}";
+        }
     }
 
-    
+
     public class StatementNode : Node
     {
         public override string Name => "Statement";
 
         public List<Node> Arguments { get; set; }
-        
-        public override Token Token { get; set; } 
+
+        public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; } = PrimitiveType.Void;
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        public override void AST(int depth = 0, string caller = "")
+
+        public override void AST(int depth = 0)
         {
             Console.Write($"{Spaces(depth * 2)}[");
             base.AST(depth);
@@ -104,6 +119,7 @@ namespace Compiler.Common.AST
             {
                 n.AST(depth + 1);
             }
+
             Console.WriteLine($"{Spaces(depth * 2)}]");
         }
     }
@@ -113,9 +129,10 @@ namespace Compiler.Common.AST
         public override string Name => "NoOp";
 
         public override PrimitiveType Type { get; set; }
-        public override Token Token { get; set; } 
+        public override Token Token { get; set; }
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        public override void AST(int depth = 0, string caller = "")
+
+        public override void AST(int depth = 0)
         {
             Console.Write($"{Spaces(depth * 2)}[");
             base.AST(depth);
@@ -123,34 +140,35 @@ namespace Compiler.Common.AST
         }
     }
 
-    
+
     public class VariableNode : Node
     {
         public override string Name => "Variable";
 
         public override PrimitiveType Type { get; set; }
 
-        public override Token Token { get; set; } 
+        public override Token Token { get; set; }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
 
-        public override void AST(int depth = 0, string caller = "")
+        public override void AST(int depth = 0)
         {
             Console.WriteLine($"{Spaces(depth * 2)}[{Name} {Type}");
             Console.WriteLine($"{Spaces((depth + 1) * 2)}[{Token.Content}]");
             Console.WriteLine($"{Spaces(depth * 2)}]");
         }
     }
-    
+
     public class AssignmentNode : ExpressionNode
     {
         public override string Name => "Assignment";
 
         public Node Id;
-        
+
         public override PrimitiveType Type { get; set; }
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        public override void AST(int depth = 0, string caller = "")
+
+        public override void AST(int depth = 0)
         {
             Console.Write($"{Spaces(depth * 2)}[");
             Console.WriteLine($"{Name} {Type}");
@@ -159,20 +177,7 @@ namespace Compiler.Common.AST
             Console.WriteLine($"{Spaces(depth * 2)}]");
         }
     }
-
-    // public class ErrorNode : Node
-    // {
-    //     public override string Name => "Error";
-    //     public ErrorType Error;
-    //     public override PrimitiveType Type { get; set; }
-    //     public override object Accept(Visitor visitor) => visitor.Visit(this);
-    //
-    //     public override void AST(int depth = 0, string caller = "")
-    //     {
-    //         Console.WriteLine($"{Spaces(depth * 2)}[{Error} {Token}]");
-    //     }
-    // }
-
+    
     public class StatementListNode : Node
     {
         public override string Name => "StatementList";
@@ -180,11 +185,17 @@ namespace Compiler.Common.AST
         public Node Left;
         public Node Right;
 
-        public override PrimitiveType Type { get; set; } = PrimitiveType.Void;
+        public override PrimitiveType Type
+        {
+            get => PrimitiveType.Void;
+            set => throw new InvalidOperationException();
+        }
+
         public override Token Token { get; set; }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        public override void AST(int depth = 0, string caller = "")
+
+        public override void AST(int depth = 0)
         {
             Console.Write($"{Spaces(depth * 2)}[");
             base.AST(depth);
@@ -200,6 +211,7 @@ namespace Compiler.Common.AST
         public override string Name => "Literal";
 
         public override PrimitiveType Type { get; set; }
+
         // {
         //     get => TokenToPrimitiveType(Token.Type);
         //     set => throw new Exception();     
@@ -207,11 +219,12 @@ namespace Compiler.Common.AST
         public override Token Token { get; set; }
 
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        public override void AST(int depth = 0, string caller = "")
+
+        public override void AST(int depth = 0)
         {
             Console.WriteLine($"{Spaces(depth * 2)}[{Name} {Type}");
             Console.WriteLine($"{Spaces((depth + 1) * 2)}[{Token.Content}]");
-            
+
             Console.WriteLine($"{Spaces(depth * 2)}]");
         }
     }
@@ -222,12 +235,18 @@ namespace Compiler.Common.AST
 
         public Node RangeStart;
         public Node RangeEnd;
-        public Node Statements;           
+        public Node Statements;
 
-        public override PrimitiveType Type { get => PrimitiveType.Void; set => throw new Exception(""); }
+        public override PrimitiveType Type
+        {
+            get => PrimitiveType.Void;
+            set => throw new InvalidOperationException();
+        }
+
         public override Token Token { get; set; }
         public override object Accept(Visitor visitor) => visitor.Visit(this);
-        public override void AST(int depth = 0, string caller = "")
+
+        public override void AST(int depth = 0)
         {
             Console.Write($"{Spaces(depth * 2)}[");
             base.AST(depth);
