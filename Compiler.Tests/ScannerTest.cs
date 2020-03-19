@@ -2,6 +2,7 @@
 using FluentAssertions;
 using NUnit.Framework;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Compiler.Common;
 using Compiler.Common.Errors;
 using Compiler.Scan;
@@ -10,6 +11,7 @@ using Moq;
 
 namespace Compiler.Tests
 {
+    [ExcludeFromCodeCoverage]
     [TestFixture()]
     public class ScannerTests
     {
@@ -54,7 +56,7 @@ Keyword (19, 21) (5, 0, 2) Int ""int""
 Assignment (26, 27) (5, 7, 8) Unknown "":=""
 IntValue (28, 28) (5, 9, 9) Unknown ""0""
 Separator (29, 29) (5, 10, 10) Unknown "";""
-EOF (29, 29) (5, 10, 10) Unknown """"";
+EOF (29, 29) (5, 10, 10) Unknown ""EOF""";
 
             AssertProgramTokens(program1, expected);
         }
@@ -75,7 +77,7 @@ Separator (47, 47) (1, 21, 21) Unknown "";""
 Keyword (77, 81) (4, 0, 4) Print ""print""
 StringValue (83, 122) (4, 6, 45) Unknown ""a/* not a comment inside literal */ // b""
 Separator (125, 125) (4, 48, 48) Unknown "";""
-EOF (125, 125) (4, 48, 48) Unknown """"";
+EOF (125, 125) (4, 48, 48) Unknown ""EOF""";
 
             AssertProgramTokens(program2, expected);
         }

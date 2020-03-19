@@ -156,7 +156,8 @@ namespace Compiler.Common
 
         public override object Visit(ForNode node)
         {
-            var id = node.Token.Content;
+            var id = node.Id.Token.Content;
+            node.Id.Accept(this);
             node.RangeStart.Accept(this);
             node.RangeEnd.Accept(this);
 

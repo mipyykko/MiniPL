@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using Compiler.Common;
 using Compiler.Common.Errors;
 using NUnit.Framework;
@@ -9,6 +10,7 @@ using Moq;
 
 namespace Compiler.Tests
 {
+    [ExcludeFromCodeCoverage]
     [TestFixture()]
     public class TextTest
     {

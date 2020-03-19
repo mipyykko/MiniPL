@@ -71,7 +71,6 @@ namespace Compiler.Parse
         private void UnexpectedTokenError(params TokenType[] tts)
         {
             var sb = new StringBuilder();
-            Console.WriteLine($"I expected {tts}");
             sb.Append(
                 tts.Length switch
                 {
@@ -143,13 +142,12 @@ namespace Compiler.Parse
             }
             catch (SyntaxErrorException)
             {
-                Console.WriteLine(
-                    $"throwing with {match}"); //  - seq was {string.Join(", ", seq)}; matches so far {string.Join(", ", matches)}");
                 return match switch
                 {
                     _ when match is TokenType => _inputToken,
                     _ when match is KeywordType => _inputToken,
                     _ when match is KeywordType[] => _inputToken,
+                    StatementType.UnaryOperator => _inputToken,
                     StatementType.Type => PrimitiveType.Void,
                     _ => NoOpStatement
                 };
@@ -183,11 +181,6 @@ namespace Compiler.Parse
                         KeywordType.End when DoBlock => StatementType.NoOpStatement,
                         _ => StatementType.Error
                     };
-
-                    if (statementType == StatementType.Error)
-                    {
-                        UnexpectedKeywordError(StatementFirstKeywords);
-                    }
 
                     MatchSequence(
                         statementType,
@@ -238,7 +231,6 @@ namespace Compiler.Parse
                 StatementType.StatementList
             ).Deconstruct(
                 out Node left,
-                // out Token _,
                 out Node right
             );
             return new StatementListNode
@@ -275,12 +267,13 @@ namespace Compiler.Parse
                 StatementType.Expression
             ).Deconstruct(
                 out Token id,
-                out Token _,
+                out Token token,
                 out Node expr
             );
 
             return new AssignmentNode
             {
+                Token = token,
                 Id = new VariableNode
                 {
                     Token = id
@@ -358,7 +351,7 @@ namespace Compiler.Parse
                 StatementType.DoEndBlock,
                 KeywordType.For
             ).Deconstruct(
-                out Token _,
+                out Token token,
                 out Token id,
                 out Token __,
                 out Node rangeStart,
@@ -370,7 +363,11 @@ namespace Compiler.Parse
 
             return new ForNode
             {
-                Token = id,
+                Token = token,
+                Id = new VariableNode
+                {
+                    Token = id
+                },
                 RangeStart = rangeStart,
                 RangeEnd = rangeEnd,
                 Statements = statements
@@ -431,7 +428,6 @@ namespace Compiler.Parse
             var tt = MatchKeywordType(expectedTypes);
             if (tt != null) return tt.KeywordType.ToPrimitiveType();
 
-            UnexpectedKeywordError(expectedTypes);
             return PrimitiveType.Void;
         }
 
@@ -576,7 +572,6 @@ namespace Compiler.Parse
             }
 
             UnexpectedTokenError(tt);
-            //NextToken();
             return matchedToken;
         }
 
@@ -623,8 +618,11 @@ namespace Compiler.Parse
                 return true;
             }
 
-            ParseError(ErrorType.SyntaxError, _inputToken,
-                $"expected one of {string.Join(", ", sl)}, got {InputTokenContent}");
+            // TODO: (?) create UnexpectedContent or whatever
+            var errorToken = _inputToken;
+            SkipToTokenType(TokenType.Separator);
+            ParseError(ErrorType.SyntaxError, errorToken,
+                $"expected one of {string.Join(", ", sl)}, got {errorToken.Content}");
             return false;
         }
     }

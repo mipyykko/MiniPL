@@ -233,6 +233,7 @@ namespace Compiler.Common.AST
     {
         public override string Name => "For";
 
+        public Node Id;
         public Node RangeStart;
         public Node RangeEnd;
         public Node Statements;
@@ -251,6 +252,7 @@ namespace Compiler.Common.AST
             Console.Write($"{Spaces(depth * 2)}[");
             base.AST(depth);
             Console.WriteLine();
+            Id.AST(depth + 1);
             RangeStart.AST(depth + 1);
             RangeEnd.AST(depth + 1);
             Statements.AST(depth + 1);

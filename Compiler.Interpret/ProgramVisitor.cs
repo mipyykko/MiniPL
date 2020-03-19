@@ -68,7 +68,7 @@ namespace Compiler.Interpret
 
         public override object Visit(ForNode node)
         {
-            var id = node.Token.Content;
+            var id = node.Id.Token.Content;
             var rangeStart = (int) node.RangeStart.Accept(this);
             var rangeEnd = (int) node.RangeEnd.Accept(this);
 

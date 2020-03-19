@@ -39,7 +39,7 @@ namespace Compiler.Scan
         {
             Source.SkipSpacesAndComments();
 
-            if (IsExhausted) return Token.Of(TokenType.EOF, GetSourceInfo(""));
+            if (IsExhausted) return Token.Of(TokenType.EOF, "EOF", GetSourceInfo(""));
 
             _startPos = Source.Pos;
             _startLinePos = Source.LinePos;

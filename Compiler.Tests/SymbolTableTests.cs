@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using Compiler.Common;
 using Microsoft.VisualStudio.TestPlatform.Common.Utilities;
 using NUnit.Framework;
 
 namespace Compiler.Tests
 {
+    [ExcludeFromCodeCoverage]
     [TestFixture()]
     public class SymbolTableTests
     {
