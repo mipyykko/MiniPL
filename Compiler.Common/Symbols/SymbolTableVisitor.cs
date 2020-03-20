@@ -31,6 +31,7 @@ namespace Compiler.Common
                             $"can't assign read result to control variable {id}", 
                             true
                         );
+                        return null;
                     }
 
                     return node.Arguments[0].Accept(this);
@@ -57,7 +58,7 @@ namespace Compiler.Common
                     ErrorType.TypeError, 
                     node.Token,
                     $"type error: can't perform operation {node.Token.Content} on {type1} and {type2}"
-                    );
+                );
             }
 
             node.Type = type1;
@@ -75,16 +76,23 @@ namespace Compiler.Common
             var type = node.Type;
             var expressionType = node.Expression.Accept(this);
 
-            Console.WriteLine($"TYPE {type} EXPRESSION TYPE {node.Expression.Type} EXPRESSION {expressionType}");
             if (node.Token?.KeywordType != KeywordType.Var)
             {
-                Console.WriteLine($"not var assignment: type is {type}, symbol {SymbolTable.LookupSymbol(id)}");
                 if (!SymbolTable.SymbolExists(id))
                 {
                     ErrorService.Add(
                         ErrorType.UndeclaredVariable, 
                         node.Id.Token, 
                         $"variable {id} not declared"
+                    );
+                }
+
+                if (SymbolTable.IsControlVariable(id))
+                {
+                    ErrorService.Add(
+                        ErrorType.AssignmentToControlVariable, 
+                        node.Id.Token,
+                        $"attempting to assign to control variable {id}"
                     );
                 }
 
@@ -111,14 +119,6 @@ namespace Compiler.Common
                 }
             }
 
-            if (SymbolTable.IsControlVariable(id))
-            {
-                ErrorService.Add(
-                    ErrorType.AssignmentToControlVariable, 
-                    node.Id.Token,
-                    $"attempting to assign to control variable {id}"
-                );
-            }
 
             SymbolTable.DeclareSymbol(id, type);
 
@@ -148,7 +148,6 @@ namespace Compiler.Common
 
         public override object Visit(LiteralNode node)
         {
-            Console.WriteLine($"LITERAL {node.Token} {node.Type}");
             return node.Type;
         }
 

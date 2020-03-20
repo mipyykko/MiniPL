@@ -18,7 +18,7 @@ namespace Compiler.Interpret
 
             try
             {
-                _memory[id] = ParseResult((PrimitiveType) SymbolTable.LookupSymbol(id), value); // TODO: error?
+                _memory[id] = ParseResult(SymbolTable.LookupSymbol(id), value); // TODO: error?
             }
             catch (Exception)
             {

@@ -130,6 +130,8 @@ namespace Compiler.Tests
             [TestCase("a := +1",
                 "expected one of !, -, got +",
                 ErrorType.SyntaxError)]
+            [TestCase(": i := 1;",
+                    "expected one of token types Keyword, Identifier, got : of type Colon")]
             public void TokenTest(string program, string errorString, ErrorType type = ErrorType.UnexpectedToken)
             {
                 Parse(program);

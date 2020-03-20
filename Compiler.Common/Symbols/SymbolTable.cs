@@ -12,7 +12,7 @@ namespace Compiler.Common
         private Dictionary<string, PrimitiveType> _symbols = new Dictionary<string, PrimitiveType>();
         private Dictionary<string, bool> _controlVariables = new Dictionary<string, bool>();
 
-        public ErrorType DeclareSymbol(string id, PrimitiveType type)
+        public virtual ErrorType DeclareSymbol(string id, PrimitiveType type)
         {
             if (_symbols.ContainsKey(id))
             {
@@ -24,7 +24,7 @@ namespace Compiler.Common
             return ErrorType.Unknown;
         }
 
-        public PrimitiveType LookupSymbol(string id)
+        public virtual PrimitiveType LookupSymbol(string id)
         {
             if (!_symbols.ContainsKey(id))
             {
@@ -37,7 +37,7 @@ namespace Compiler.Common
         
         public bool SymbolExists(string id) => _symbols.ContainsKey(id);
 
-        public ErrorType SetControlVariable(string id)
+        public virtual ErrorType SetControlVariable(string id)
         {
             if (!_symbols.ContainsKey(id))
             {
@@ -48,7 +48,7 @@ namespace Compiler.Common
             return ErrorType.Unknown;
         }
 
-        public ErrorType UnsetControlVariable(string id)
+        public virtual ErrorType UnsetControlVariable(string id)
         {
             if (!_controlVariables.ContainsKey(id))
             {

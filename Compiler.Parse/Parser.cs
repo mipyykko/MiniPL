@@ -216,11 +216,12 @@ namespace Compiler.Parse
                 case TokenType.Keyword when StatementFirstKeywords.Includes(InputTokenKeywordType):
                 case TokenType.Identifier:
                     return (Node) Match(StatementType.StatementStatementList);
-                default:
-                {
+                case TokenType.Keyword:
                     UnexpectedKeywordError(StatementFirstKeywords);
                     return NoOpStatement;
-                }
+                default:
+                    UnexpectedTokenError(StatementFirstTokens);
+                    return NoOpStatement;
             }
         }
 
