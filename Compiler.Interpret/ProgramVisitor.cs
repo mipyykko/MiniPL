@@ -154,7 +154,7 @@ namespace Compiler.Interpret
                     ErrorService.Add(
                         ErrorType.InvalidOperation, 
                         node.Token, 
-                    $"invalid operation ${op}"
+                    $"invalid binary operation {node.Token.Content}" // TODO: operands?
                     );
                     break;
             }
@@ -164,16 +164,24 @@ namespace Compiler.Interpret
 
         public override object Visit(UnaryNode node)
         {
-            return node.Token.Content switch
+            try
             {
-                "-" => (object) -(int) node.Value.Accept(this),
-                "!" => !(bool) node.Value.Accept(this),
-                _ => ErrorService.Add(
-                        ErrorType.InvalidOperation, 
-                        node.Token,
+                return node.Token.Content switch
+                {
+                    "-" => (object) -(int) node.Value.Accept(this),
+                    "!" => !(bool) node.Value.Accept(this),
+                    _ => throw new InvalidOperationException()
+                };
+            }
+            catch (Exception)
+            {
+                ErrorService.Add(
+                    ErrorType.InvalidOperation,
+                    node.Token,
                     $"invalid unary operator {node.Token.Content}"
-                    )
-            };
+                );
+                return null;
+            }
         }
 
         public override object Visit(AssignmentNode node)
@@ -182,9 +190,11 @@ namespace Compiler.Interpret
             var value = node.Expression.Accept(this);
             var type = node.Type;
 
-            _memory.UpdateVariable(id, value ?? DefaultValue(type));
+            var newValue = value ?? DefaultValue(type);
+            
+            _memory.UpdateVariable(id, newValue);
 
-            return value;
+            return newValue;
         }
 
         public override object Visit(LiteralNode node)

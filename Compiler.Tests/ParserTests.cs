@@ -1,7 +1,6 @@
 using System;
-using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Xml;
+using System.IO;
 using Compiler.Common;
 using Compiler.Common.AST;
 using Compiler.Common.Errors;
@@ -9,6 +8,7 @@ using Compiler.Parse;
 using Compiler.Scan;
 using Moq;
 using NUnit.Framework;
+using Snapper;
 
 namespace Compiler.Tests
 {
@@ -36,7 +36,7 @@ namespace Compiler.Tests
             var left = ((StatementListNode) tree).Left;
             Console.Write($"{program} {left.Name}");
             var leftleft = ((StatementListNode) left).Left;
-            
+
             Assert.AreEqual(
                 "StatementList",
                 tree.Name
@@ -45,7 +45,7 @@ namespace Compiler.Tests
                 "StatementList",
                 left.Name
             );
-            
+
             Assert.AreEqual(
                 nodeType,
                 leftleft.Name
@@ -63,7 +63,7 @@ namespace Compiler.Tests
         public class Unexpected
         {
             private Mock<IErrorService> errorService;
-            
+
             [SetUp]
             public void Setup()
             {
@@ -86,8 +86,8 @@ namespace Compiler.Tests
                 parser.Program();
             }
 
-            [TestCase("var i : in := 1;", 
-                "expected one of keyword types Int, String, Bool, got in of type In", 
+            [TestCase("var i : in := 1;",
+                "expected one of keyword types Int, String, Bool, got in of type In",
                 Description = "multiple possible keywords")]
             [TestCase("for i in 0..2 do\nprint i;\nend fo",
                 "expected keyword of type For, got fo of type Unknown",
@@ -104,7 +104,7 @@ namespace Compiler.Tests
             public void KeywordTest(string program, string errorString)
             {
                 Parse(program);
-                
+
                 errorService.Verify(es => es.Add(
                     It.Is<ErrorType>(et => et == ErrorType.UnexpectedKeyword),
                     It.IsAny<Token>(),
@@ -131,17 +131,90 @@ namespace Compiler.Tests
                 "expected one of !, -, got +",
                 ErrorType.SyntaxError)]
             [TestCase(": i := 1;",
-                    "expected one of token types Keyword, Identifier, got : of type Colon")]
+                "expected one of token types Keyword, Identifier, got : of type Colon")]
             public void TokenTest(string program, string errorString, ErrorType type = ErrorType.UnexpectedToken)
             {
                 Parse(program);
-                
+
                 errorService.Verify(es => es.Add(
                     It.Is<ErrorType>(et => et == type),
                     It.IsAny<Token>(),
                     It.Is<string>(s => s.Contains(errorString)),
                     false
                 ));
+            }
+        }
+
+        [TestFixture]
+        public class TreeTests
+        {
+            private static Scanner scanner;
+            private static Parser parser;
+
+            [SetUp]
+            public void Setup()
+            {
+                Context.ErrorService = new ErrorService();
+                Context.SymbolTable = new SymbolTable();
+
+                scanner = new Scanner();
+                parser = new Parser(scanner);
+            }
+
+            [TearDown]
+            public void Teardown()
+            {
+                var sin = new StreamReader(Console.OpenStandardInput());
+                Console.SetIn(sin);
+
+                var sout = new StreamWriter(Console.OpenStandardOutput())
+                {
+                    AutoFlush = true
+                };
+                Console.SetOut(sout);
+            }
+
+            [TestFixture]
+            public class Program3
+            {
+                [SetUp]
+                public void Setup()
+                {
+                    var source = $@"print ""Give a number: "";
+var n : int;
+read n;
+var v : int := 1;
+var i : int;
+for i in 1..n do
+    v := v * i;
+end for;
+print ""The result is: "";
+print v;
+assert (!(v < 0));";
+                    Context.Source = Text.Of(source);
+                    Context.ErrorService = new ErrorService();
+                    Context.SymbolTable = new SymbolTable();
+
+                    scanner = new Scanner();
+                    parser = new Parser(scanner);
+                }
+
+                [Test]
+                public void TreeTest()
+                {
+                    var tree = parser.Program();
+                    tree.ShouldMatchSnapshot();
+                }
+
+                [Test]
+                public void ASTTest()
+                {
+                    var output = new StringWriter();
+                    Console.SetOut(output);
+                    var tree = parser.Program();
+                    tree.AST();
+                    output.ToString().ShouldMatchSnapshot();
+                }
             }
         }
     }

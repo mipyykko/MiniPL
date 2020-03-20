@@ -177,5 +177,222 @@ namespace Compiler.Tests
                 i += direction;
             }
         }
+
+        [Test]
+        public void NoOpNodeTest() => Assert.Null(visitor.Visit(new NoOpNode()));
+        
+        [Test]
+        public void StatementListTest()
+        {
+            var mockNode = new Mock<StatementNode>();
+
+            var node = new StatementListNode
+            {
+                Left = mockNode.Object,
+                Right = mockNode.Object
+            };
+
+            visitor.Visit(node);
+
+            mockNode.Verify(n => n.Accept(visitor), Times.Exactly(2));
+        }
+
+        [Test]
+        public void ExpressionNodeTest()
+        {
+            var mockNode = new Mock<LiteralNode>();
+
+            var node = new ExpressionNode
+            {
+                Expression = mockNode.Object
+            };
+
+            var ret = visitor.Visit(node);
+
+            mockNode.Verify(n => n.Accept(visitor), Times.Once);
+        }
+
+        [TestCase(1, 2, "+", 3)]
+        [TestCase(-1, 1, "+", 0)]
+        [TestCase("kissa", "koira", "+", "kissakoira")]
+        [TestCase(3, 2, "-", 1)]
+        [TestCase(2, 6, "*", 12)]
+        [TestCase(6, 2, "/", 3)]
+        [TestCase(true, true, "&", true)]
+        [TestCase(false, true, "&", false)]
+        [TestCase(3, 6, "<", true)]
+        [TestCase(6, 3, "<", false)]
+        [TestCase("aaa", "aab", "<", true)]
+        [TestCase("aab", "aaa", "<", false)]
+        [TestCase(true, false, "<", false)]
+        [TestCase(false, true, "<", true)]
+        [TestCase(1, 1, "=", true)]
+        [TestCase(1, 2, "=", false)]
+        [TestCase("kissa", "kissa", "=", true)]
+        [TestCase("kissa", "koira", "=", false)]
+        [TestCase(true, true, "=", true)]
+        [TestCase(true, false, "=", false)]
+        [TestCase(1, "kissa", "+", null, true)]
+        [TestCase("kissa", "koira", "-", null, true)]
+        [TestCase(true, false, "*", null, true)]
+        [TestCase(2, 3, "&", null, true)]
+        [TestCase(2, true, "<", null, true)]
+        public void BinaryNodeTests(object left, object right, string op, object expected, bool error = false)
+        {
+            var leftNodeMock = new Mock<LiteralNode>();
+            var rightNodeMock = new Mock<LiteralNode>();
+            leftNodeMock.Setup(m => m.Accept(visitor)).Returns(left);
+            rightNodeMock.Setup(m => m.Accept(visitor)).Returns(right);
+
+            var nodeToken = Token.Of(
+                TokenType.Operator,
+                KeywordType.Unknown,
+                op,
+                SourceInfo.Of((0, 0), (0, 0, 0))
+            );
+            var node = new BinaryNode
+            {
+                Token = nodeToken,
+                Left = leftNodeMock.Object,
+                Right = rightNodeMock.Object,
+            };
+
+            var ret = visitor.Visit(node);
+            
+            leftNodeMock.Verify(m => m.Accept(visitor), Times.Once);
+            rightNodeMock.Verify(m => m.Accept(visitor), Times.Once);
+            
+            if (error)
+            {
+                errorServiceMock.Verify(m => m.Add(
+                    ErrorType.InvalidOperation,
+                    nodeToken,
+                    $"invalid binary operation {op}",
+                    false
+                ), Times.Once);
+            }
+            Assert.AreEqual(expected, ret);
+        }
+
+        [TestCase("-", 1, -1)]
+        [TestCase("+", 1, null, true)]
+        [TestCase("*", true, null, true)]
+        [TestCase("-", "kissa", null, true)]
+        [TestCase("!", true, false)]
+        [TestCase("!", false, true)]
+        [TestCase("!", 6, null, true)]
+        public void UnaryNodeTests(string op, object value, object expected, bool error = false)
+        {
+            var nodeMock = new Mock<LiteralNode>();
+            nodeMock.Setup(n => n.Accept(visitor)).Returns(value);
+            var nodeToken = Token.Of(
+                TokenType.Operator,
+                KeywordType.Unknown,
+                op,
+                SourceInfo.Of((0, 0), (0, 0, 0))
+            );
+
+            var node = new UnaryNode
+            {
+                Token = nodeToken,
+                Value = nodeMock.Object
+            };
+
+            var ret = visitor.Visit(node);
+
+            if (error)
+            {
+                errorServiceMock.Verify(e => e.Add(
+                    ErrorType.InvalidOperation,
+                    nodeToken,
+                    $"invalid unary operator {op}",
+                    false
+                ), Times.Once);
+            }
+            
+            Assert.AreEqual(expected, ret);
+        }
+
+        [TestCase("a", PrimitiveType.Int, 6, 6)]
+        [TestCase("a", PrimitiveType.Int, null, 0)]
+        [TestCase("b", PrimitiveType.String, "kissa", "kissa")]
+        [TestCase("b", PrimitiveType.String, null, "")]
+        [TestCase("c", PrimitiveType.Bool, true, true)]
+        [TestCase("c", PrimitiveType.Bool, null, false)]
+        public void AssignmentNodeTests(string id, PrimitiveType type, object value, object expected)
+        {
+            var nodeMock = new Mock<ExpressionNode>();
+            nodeMock.Setup(n => n.Accept(visitor)).Returns(value);
+            var idToken = Token.Of(
+                TokenType.Identifier,
+                KeywordType.Unknown,
+                id,
+                SourceInfo.Of((0, 0), (0, 0, 0))
+            );
+            var node = new AssignmentNode
+            {
+                Id = new VariableNode
+                {
+                    Token = idToken
+                },
+                Expression = nodeMock.Object,
+                Type = type
+            };
+
+            var ret = visitor.Visit(node);
+            
+            memoryMock.Verify(m => m.UpdateVariable(id, expected, false), Times.Once);
+            Assert.AreEqual(expected, ret);
+        }
+
+        [TestCase(PrimitiveType.Int, TokenType.IntValue, "6")]
+        [TestCase(PrimitiveType.String, TokenType.StringValue, "kissa")]
+        [TestCase(PrimitiveType.Bool, TokenType.BoolValue, "false")]
+        public void LiteralNodeTests(PrimitiveType type, TokenType tt, string content)
+        {
+            var node = new LiteralNode
+            {
+                Type = type,
+                Token = Token.Of(
+                    tt,
+                    KeywordType.Unknown,
+                    content,
+                    SourceInfo.Of((0, 0), (0, 0, 0))
+                )
+            };
+            visitor.Visit(node);
+            
+            memoryMock.Verify(m => m.ParseResult(type, content), Times.Once);
+        }
+
+        [TestCase("a")]
+        [TestCase("a", true)]
+        public void VariableNodeTests(string id, bool error = false)
+        {
+            var nodeToken = Token.Of(
+                TokenType.Identifier,
+                KeywordType.Unknown,
+                id,
+                SourceInfo.Of((0, 0), (0, 0, 0))
+            );
+            var node = new VariableNode
+            {
+                Token = nodeToken
+            };
+            symbolTableMock.Setup(s => s.SymbolExists(id)).Returns(!error);
+            
+            visitor.Visit(node);
+
+            if (error)
+            {
+                errorServiceMock.Verify(e => e.Add(
+                    ErrorType.UndeclaredVariable,
+                    nodeToken,
+                    It.IsAny<string>(),
+                    false
+                ));
+            }
+            memoryMock.Verify(m => m.LookupVariable(id), Times.Once);
+        }
     }
 }

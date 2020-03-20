@@ -51,7 +51,7 @@ namespace Compiler.Common
         
         public static object DefaultValue(PrimitiveType pt) => pt switch
         {
-            PrimitiveType.Bool => "false",
+            PrimitiveType.Bool => false,
             PrimitiveType.Int => 0,
             PrimitiveType.String => "",
             _ => null

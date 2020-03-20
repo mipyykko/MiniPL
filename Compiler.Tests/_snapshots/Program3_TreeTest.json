@@ -1,0 +1,810 @@
+{
+  "Left": {
+    "Left": {
+      "Name": "Statement",
+      "Arguments": [
+        {
+          "Name": "Literal",
+          "Type": 2,
+          "Token": {
+            "Type": 23,
+            "KeywordType": 0,
+            "Content": "Give a number: ",
+            "SourceInfo": {
+              "SourceRange": {
+                "Item1": 6,
+                "Item2": 20
+              },
+              "LineRange": {
+                "Item1": 0,
+                "Item2": 6,
+                "Item3": 20
+              }
+            }
+          },
+          "Parent": null,
+          "Value": null
+        }
+      ],
+      "Token": {
+        "Type": 20,
+        "KeywordType": 7,
+        "Content": "print",
+        "SourceInfo": {
+          "SourceRange": {
+            "Item1": 0,
+            "Item2": 4
+          },
+          "LineRange": {
+            "Item1": 0,
+            "Item2": 0,
+            "Item3": 4
+          }
+        }
+      },
+      "Type": 0,
+      "Parent": null,
+      "Value": null
+    },
+    "Right": {
+      "Left": {
+        "Id": {
+          "Name": "Variable",
+          "Type": 1,
+          "Token": {
+            "Type": 21,
+            "KeywordType": 0,
+            "Content": "n",
+            "SourceInfo": {
+              "SourceRange": {
+                "Item1": 29,
+                "Item2": 29
+              },
+              "LineRange": {
+                "Item1": 1,
+                "Item2": 4,
+                "Item3": 4
+              }
+            }
+          },
+          "Parent": null,
+          "Value": null
+        },
+        "Expression": {
+          "Name": "NoOp",
+          "Type": 0,
+          "Token": null,
+          "Parent": null,
+          "Value": null
+        },
+        "Name": "Assignment",
+        "Type": 1,
+        "Token": {
+          "Type": 20,
+          "KeywordType": 1,
+          "Content": "var",
+          "SourceInfo": {
+            "SourceRange": {
+              "Item1": 25,
+              "Item2": 27
+            },
+            "LineRange": {
+              "Item1": 1,
+              "Item2": 0,
+              "Item3": 2
+            }
+          }
+        },
+        "Parent": null,
+        "Value": null
+      },
+      "Right": {
+        "Left": {
+          "Name": "Statement",
+          "Arguments": [
+            {
+              "Name": "Variable",
+              "Type": 0,
+              "Token": {
+                "Type": 21,
+                "KeywordType": 0,
+                "Content": "n",
+                "SourceInfo": {
+                  "SourceRange": {
+                    "Item1": 43,
+                    "Item2": 43
+                  },
+                  "LineRange": {
+                    "Item1": 2,
+                    "Item2": 5,
+                    "Item3": 5
+                  }
+                }
+              },
+              "Parent": null,
+              "Value": null
+            }
+          ],
+          "Token": {
+            "Type": 20,
+            "KeywordType": 6,
+            "Content": "read",
+            "SourceInfo": {
+              "SourceRange": {
+                "Item1": 38,
+                "Item2": 41
+              },
+              "LineRange": {
+                "Item1": 2,
+                "Item2": 0,
+                "Item3": 3
+              }
+            }
+          },
+          "Type": 0,
+          "Parent": null,
+          "Value": null
+        },
+        "Right": {
+          "Left": {
+            "Id": {
+              "Name": "Variable",
+              "Type": 1,
+              "Token": {
+                "Type": 21,
+                "KeywordType": 0,
+                "Content": "v",
+                "SourceInfo": {
+                  "SourceRange": {
+                    "Item1": 50,
+                    "Item2": 50
+                  },
+                  "LineRange": {
+                    "Item1": 3,
+                    "Item2": 4,
+                    "Item3": 4
+                  }
+                }
+              },
+              "Parent": null,
+              "Value": null
+            },
+            "Expression": {
+              "Name": "Literal",
+              "Type": 1,
+              "Token": {
+                "Type": 24,
+                "KeywordType": 0,
+                "Content": "1",
+                "SourceInfo": {
+                  "SourceRange": {
+                    "Item1": 61,
+                    "Item2": 61
+                  },
+                  "LineRange": {
+                    "Item1": 3,
+                    "Item2": 15,
+                    "Item3": 15
+                  }
+                }
+              },
+              "Parent": null,
+              "Value": null
+            },
+            "Name": "Assignment",
+            "Type": 1,
+            "Token": {
+              "Type": 20,
+              "KeywordType": 1,
+              "Content": "var",
+              "SourceInfo": {
+                "SourceRange": {
+                  "Item1": 46,
+                  "Item2": 48
+                },
+                "LineRange": {
+                  "Item1": 3,
+                  "Item2": 0,
+                  "Item3": 2
+                }
+              }
+            },
+            "Parent": null,
+            "Value": null
+          },
+          "Right": {
+            "Left": {
+              "Id": {
+                "Name": "Variable",
+                "Type": 1,
+                "Token": {
+                  "Type": 21,
+                  "KeywordType": 0,
+                  "Content": "i",
+                  "SourceInfo": {
+                    "SourceRange": {
+                      "Item1": 68,
+                      "Item2": 68
+                    },
+                    "LineRange": {
+                      "Item1": 4,
+                      "Item2": 4,
+                      "Item3": 4
+                    }
+                  }
+                },
+                "Parent": null,
+                "Value": null
+              },
+              "Expression": {
+                "Name": "NoOp",
+                "Type": 0,
+                "Token": null,
+                "Parent": null,
+                "Value": null
+              },
+              "Name": "Assignment",
+              "Type": 1,
+              "Token": {
+                "Type": 20,
+                "KeywordType": 1,
+                "Content": "var",
+                "SourceInfo": {
+                  "SourceRange": {
+                    "Item1": 64,
+                    "Item2": 66
+                  },
+                  "LineRange": {
+                    "Item1": 4,
+                    "Item2": 0,
+                    "Item3": 2
+                  }
+                }
+              },
+              "Parent": null,
+              "Value": null
+            },
+            "Right": {
+              "Left": {
+                "Id": {
+                  "Name": "Variable",
+                  "Type": 0,
+                  "Token": {
+                    "Type": 21,
+                    "KeywordType": 0,
+                    "Content": "i",
+                    "SourceInfo": {
+                      "SourceRange": {
+                        "Item1": 81,
+                        "Item2": 81
+                      },
+                      "LineRange": {
+                        "Item1": 5,
+                        "Item2": 4,
+                        "Item3": 4
+                      }
+                    }
+                  },
+                  "Parent": null,
+                  "Value": null
+                },
+                "RangeStart": {
+                  "Name": "Literal",
+                  "Type": 1,
+                  "Token": {
+                    "Type": 24,
+                    "KeywordType": 0,
+                    "Content": "1",
+                    "SourceInfo": {
+                      "SourceRange": {
+                        "Item1": 86,
+                        "Item2": 86
+                      },
+                      "LineRange": {
+                        "Item1": 5,
+                        "Item2": 9,
+                        "Item3": 9
+                      }
+                    }
+                  },
+                  "Parent": null,
+                  "Value": null
+                },
+                "RangeEnd": {
+                  "Name": "Variable",
+                  "Type": 0,
+                  "Token": {
+                    "Type": 21,
+                    "KeywordType": 0,
+                    "Content": "n",
+                    "SourceInfo": {
+                      "SourceRange": {
+                        "Item1": 89,
+                        "Item2": 89
+                      },
+                      "LineRange": {
+                        "Item1": 5,
+                        "Item2": 12,
+                        "Item3": 12
+                      }
+                    }
+                  },
+                  "Parent": null,
+                  "Value": null
+                },
+                "Statements": {
+                  "Left": {
+                    "Id": {
+                      "Name": "Variable",
+                      "Type": 0,
+                      "Token": {
+                        "Type": 21,
+                        "KeywordType": 0,
+                        "Content": "v",
+                        "SourceInfo": {
+                          "SourceRange": {
+                            "Item1": 98,
+                            "Item2": 98
+                          },
+                          "LineRange": {
+                            "Item1": 6,
+                            "Item2": 4,
+                            "Item3": 4
+                          }
+                        }
+                      },
+                      "Parent": null,
+                      "Value": null
+                    },
+                    "Expression": {
+                      "Expression": {
+                        "Left": {
+                          "Name": "Variable",
+                          "Type": 0,
+                          "Token": {
+                            "Type": 21,
+                            "KeywordType": 0,
+                            "Content": "v",
+                            "SourceInfo": {
+                              "SourceRange": {
+                                "Item1": 103,
+                                "Item2": 103
+                              },
+                              "LineRange": {
+                                "Item1": 6,
+                                "Item2": 9,
+                                "Item3": 9
+                              }
+                            }
+                          },
+                          "Parent": null,
+                          "Value": null
+                        },
+                        "Right": {
+                          "Name": "Variable",
+                          "Type": 0,
+                          "Token": {
+                            "Type": 21,
+                            "KeywordType": 0,
+                            "Content": "i",
+                            "SourceInfo": {
+                              "SourceRange": {
+                                "Item1": 107,
+                                "Item2": 107
+                              },
+                              "LineRange": {
+                                "Item1": 6,
+                                "Item2": 13,
+                                "Item3": 13
+                              }
+                            }
+                          },
+                          "Parent": null,
+                          "Value": null
+                        },
+                        "Name": "BinaryOp",
+                        "Token": {
+                          "Type": 12,
+                          "KeywordType": 0,
+                          "Content": "*",
+                          "SourceInfo": {
+                            "SourceRange": {
+                              "Item1": 105,
+                              "Item2": 105
+                            },
+                            "LineRange": {
+                              "Item1": 6,
+                              "Item2": 11,
+                              "Item3": 11
+                            }
+                          }
+                        },
+                        "Type": 0,
+                        "Parent": null,
+                        "Value": null
+                      },
+                      "Name": "Expression",
+                      "Token": {
+                        "Type": 21,
+                        "KeywordType": 0,
+                        "Content": "v",
+                        "SourceInfo": {
+                          "SourceRange": {
+                            "Item1": 103,
+                            "Item2": 103
+                          },
+                          "LineRange": {
+                            "Item1": 6,
+                            "Item2": 9,
+                            "Item3": 9
+                          }
+                        }
+                      },
+                      "Type": 0,
+                      "Parent": null,
+                      "Value": null
+                    },
+                    "Name": "Assignment",
+                    "Type": 0,
+                    "Token": {
+                      "Type": 6,
+                      "KeywordType": 0,
+                      "Content": ":=",
+                      "SourceInfo": {
+                        "SourceRange": {
+                          "Item1": 100,
+                          "Item2": 101
+                        },
+                        "LineRange": {
+                          "Item1": 6,
+                          "Item2": 6,
+                          "Item3": 7
+                        }
+                      }
+                    },
+                    "Parent": null,
+                    "Value": null
+                  },
+                  "Right": {
+                    "Name": "NoOp",
+                    "Type": 0,
+                    "Token": null,
+                    "Parent": null,
+                    "Value": null
+                  },
+                  "Name": "StatementList",
+                  "Type": 0,
+                  "Token": null,
+                  "Parent": null,
+                  "Value": null
+                },
+                "Name": "For",
+                "Type": 0,
+                "Token": {
+                  "Type": 20,
+                  "KeywordType": 2,
+                  "Content": "for",
+                  "SourceInfo": {
+                    "SourceRange": {
+                      "Item1": 77,
+                      "Item2": 79
+                    },
+                    "LineRange": {
+                      "Item1": 5,
+                      "Item2": 0,
+                      "Item3": 2
+                    }
+                  }
+                },
+                "Parent": null,
+                "Value": null
+              },
+              "Right": {
+                "Left": {
+                  "Name": "Statement",
+                  "Arguments": [
+                    {
+                      "Name": "Literal",
+                      "Type": 2,
+                      "Token": {
+                        "Type": 23,
+                        "KeywordType": 0,
+                        "Content": "The result is: ",
+                        "SourceInfo": {
+                          "SourceRange": {
+                            "Item1": 125,
+                            "Item2": 139
+                          },
+                          "LineRange": {
+                            "Item1": 8,
+                            "Item2": 6,
+                            "Item3": 20
+                          }
+                        }
+                      },
+                      "Parent": null,
+                      "Value": null
+                    }
+                  ],
+                  "Token": {
+                    "Type": 20,
+                    "KeywordType": 7,
+                    "Content": "print",
+                    "SourceInfo": {
+                      "SourceRange": {
+                        "Item1": 119,
+                        "Item2": 123
+                      },
+                      "LineRange": {
+                        "Item1": 8,
+                        "Item2": 0,
+                        "Item3": 4
+                      }
+                    }
+                  },
+                  "Type": 0,
+                  "Parent": null,
+                  "Value": null
+                },
+                "Right": {
+                  "Left": {
+                    "Name": "Statement",
+                    "Arguments": [
+                      {
+                        "Name": "Variable",
+                        "Type": 0,
+                        "Token": {
+                          "Type": 21,
+                          "KeywordType": 0,
+                          "Content": "v",
+                          "SourceInfo": {
+                            "SourceRange": {
+                              "Item1": 150,
+                              "Item2": 150
+                            },
+                            "LineRange": {
+                              "Item1": 9,
+                              "Item2": 6,
+                              "Item3": 6
+                            }
+                          }
+                        },
+                        "Parent": null,
+                        "Value": null
+                      }
+                    ],
+                    "Token": {
+                      "Type": 20,
+                      "KeywordType": 7,
+                      "Content": "print",
+                      "SourceInfo": {
+                        "SourceRange": {
+                          "Item1": 144,
+                          "Item2": 148
+                        },
+                        "LineRange": {
+                          "Item1": 9,
+                          "Item2": 0,
+                          "Item3": 4
+                        }
+                      }
+                    },
+                    "Type": 0,
+                    "Parent": null,
+                    "Value": null
+                  },
+                  "Right": {
+                    "Left": {
+                      "Name": "Statement",
+                      "Arguments": [
+                        {
+                          "Expression": {
+                            "Value": {
+                              "Expression": {
+                                "Left": {
+                                  "Name": "Variable",
+                                  "Type": 0,
+                                  "Token": {
+                                    "Type": 21,
+                                    "KeywordType": 0,
+                                    "Content": "v",
+                                    "SourceInfo": {
+                                      "SourceRange": {
+                                        "Item1": 163,
+                                        "Item2": 163
+                                      },
+                                      "LineRange": {
+                                        "Item1": 10,
+                                        "Item2": 10,
+                                        "Item3": 10
+                                      }
+                                    }
+                                  },
+                                  "Parent": null,
+                                  "Value": null
+                                },
+                                "Right": {
+                                  "Name": "Literal",
+                                  "Type": 1,
+                                  "Token": {
+                                    "Type": 24,
+                                    "KeywordType": 0,
+                                    "Content": "0",
+                                    "SourceInfo": {
+                                      "SourceRange": {
+                                        "Item1": 167,
+                                        "Item2": 167
+                                      },
+                                      "LineRange": {
+                                        "Item1": 10,
+                                        "Item2": 14,
+                                        "Item3": 14
+                                      }
+                                    }
+                                  },
+                                  "Parent": null,
+                                  "Value": null
+                                },
+                                "Name": "BinaryOp",
+                                "Token": {
+                                  "Type": 12,
+                                  "KeywordType": 0,
+                                  "Content": "<",
+                                  "SourceInfo": {
+                                    "SourceRange": {
+                                      "Item1": 165,
+                                      "Item2": 165
+                                    },
+                                    "LineRange": {
+                                      "Item1": 10,
+                                      "Item2": 12,
+                                      "Item3": 12
+                                    }
+                                  }
+                                },
+                                "Type": 0,
+                                "Parent": null,
+                                "Value": null
+                              },
+                              "Name": "Expression",
+                              "Token": {
+                                "Type": 21,
+                                "KeywordType": 0,
+                                "Content": "v",
+                                "SourceInfo": {
+                                  "SourceRange": {
+                                    "Item1": 163,
+                                    "Item2": 163
+                                  },
+                                  "LineRange": {
+                                    "Item1": 10,
+                                    "Item2": 10,
+                                    "Item3": 10
+                                  }
+                                }
+                              },
+                              "Type": 0,
+                              "Parent": null,
+                              "Value": null
+                            },
+                            "Name": "UnaryOp",
+                            "Token": {
+                              "Type": 12,
+                              "KeywordType": 0,
+                              "Content": "!",
+                              "SourceInfo": {
+                                "SourceRange": {
+                                  "Item1": 161,
+                                  "Item2": 161
+                                },
+                                "LineRange": {
+                                  "Item1": 10,
+                                  "Item2": 8,
+                                  "Item3": 8
+                                }
+                              }
+                            },
+                            "Type": 0,
+                            "Parent": null
+                          },
+                          "Name": "Expression",
+                          "Token": null,
+                          "Type": 3,
+                          "Parent": null,
+                          "Value": null
+                        }
+                      ],
+                      "Token": {
+                        "Type": 20,
+                        "KeywordType": 11,
+                        "Content": "assert",
+                        "SourceInfo": {
+                          "SourceRange": {
+                            "Item1": 153,
+                            "Item2": 158
+                          },
+                          "LineRange": {
+                            "Item1": 10,
+                            "Item2": 0,
+                            "Item3": 5
+                          }
+                        }
+                      },
+                      "Type": 0,
+                      "Parent": null,
+                      "Value": null
+                    },
+                    "Right": {
+                      "Name": "NoOp",
+                      "Type": 0,
+                      "Token": null,
+                      "Parent": null,
+                      "Value": null
+                    },
+                    "Name": "StatementList",
+                    "Type": 0,
+                    "Token": null,
+                    "Parent": null,
+                    "Value": null
+                  },
+                  "Name": "StatementList",
+                  "Type": 0,
+                  "Token": null,
+                  "Parent": null,
+                  "Value": null
+                },
+                "Name": "StatementList",
+                "Type": 0,
+                "Token": null,
+                "Parent": null,
+                "Value": null
+              },
+              "Name": "StatementList",
+              "Type": 0,
+              "Token": null,
+              "Parent": null,
+              "Value": null
+            },
+            "Name": "StatementList",
+            "Type": 0,
+            "Token": null,
+            "Parent": null,
+            "Value": null
+          },
+          "Name": "StatementList",
+          "Type": 0,
+          "Token": null,
+          "Parent": null,
+          "Value": null
+        },
+        "Name": "StatementList",
+        "Type": 0,
+        "Token": null,
+        "Parent": null,
+        "Value": null
+      },
+      "Name": "StatementList",
+      "Type": 0,
+      "Token": null,
+      "Parent": null,
+      "Value": null
+    },
+    "Name": "StatementList",
+    "Type": 0,
+    "Token": null,
+    "Parent": null,
+    "Value": null
+  },
+  "Right": {
+    "Name": "NoOp",
+    "Type": 0,
+    "Token": null,
+    "Parent": null,
+    "Value": null
+  },
+  "Name": "StatementList",
+  "Type": 0,
+  "Token": null,
+  "Parent": null,
+  "Value": null
+}
