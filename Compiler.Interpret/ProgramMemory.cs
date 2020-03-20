@@ -4,7 +4,7 @@ using Compiler.Common;
 
 namespace Compiler.Interpret
 {
-    internal class ProgramMemory
+    public class ProgramMemory : IProgramMemory
     {
         private readonly Dictionary<string, object> _memory = new Dictionary<string, object>();
         private ISymbolTable SymbolTable => Context.SymbolTable;
@@ -40,11 +40,6 @@ namespace Compiler.Interpret
 
         public object LookupVariable(string id)
         {
-            if (!_memory.ContainsKey(id))
-            {
-                return ErrorType.UndeclaredVariable; // TODO
-            }
-
             return _memory[id];
         }
         
@@ -57,7 +52,7 @@ namespace Compiler.Interpret
                 {
                     PrimitiveType.Int when value is string s => int.Parse(s),
                     PrimitiveType.String => (string) value,
-                    PrimitiveType.Bool when value is string s => s.ToLower().Equals("true"),
+                    PrimitiveType.Bool when value is string s => bool.Parse(s), // TODO: hmm
                     _ => value
                 };
             /*}

@@ -12,7 +12,7 @@ namespace Compiler.Interpret
         public Interpreter(Node tree)
         {
             _tree = tree;
-            Visitor v = new ProgramVisitor();
+            Visitor v = new ProgramVisitor(new ProgramMemory());
             _tree.Accept(v);
         }
     }

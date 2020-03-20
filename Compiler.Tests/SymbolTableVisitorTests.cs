@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data;
 using Compiler.Common;
@@ -18,9 +19,11 @@ namespace Compiler.Tests
         [SetUp]
         public void Setup()
         {
-            symbolTableMock = new Mock<SymbolTable>();
+            symbolTableMock = new Mock<SymbolTable>
+            {
+                CallBase = true
+            };
 
-            symbolTableMock.CallBase = true;
             symbolTable = symbolTableMock.Object;
             symbolTable.DeclareSymbol("a", PrimitiveType.Int);
             symbolTable.DeclareSymbol("b", PrimitiveType.Int);
@@ -32,6 +35,13 @@ namespace Compiler.Tests
             Context.ErrorService = errorServiceMock.Object;
             
             visitor = new SymbolTableVisitor();
+        }
+
+        [TearDown]
+        public void Teardown()
+        {
+            Context.SymbolTable = null;
+            Context.ErrorService = null;
         }
 
         [TestCase(KeywordType.Print)]
@@ -301,5 +311,4 @@ namespace Compiler.Tests
             Assert.AreEqual(PrimitiveType.Int, ret);
         }
     }
-    
 }

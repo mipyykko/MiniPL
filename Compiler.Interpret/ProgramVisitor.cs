@@ -9,16 +9,15 @@ namespace Compiler.Interpret
 {
     public class ProgramVisitor : Visitor
     {
-        private Text Source => Context.Source;
         private IErrorService ErrorService => Context.ErrorService;
         private ISymbolTable SymbolTable => Context.SymbolTable;
-        private ProgramMemory _memory;
-
-        public ProgramVisitor()
+        private IProgramMemory _memory;
+        
+        public ProgramVisitor(IProgramMemory memory)
         {
-            _memory = new ProgramMemory();
+            _memory = memory;
         }
-
+        
         public override object Visit(StatementNode node)
         {
             switch (node.Token.KeywordType)
