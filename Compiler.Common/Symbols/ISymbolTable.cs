@@ -1,6 +1,6 @@
 using Compiler.Common;
 
-namespace Compiler.Common.Symbols
+namespace Compiler.Common
 {
     public interface ISymbolTable
     {

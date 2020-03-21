@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Compiler.Common;
-using Compiler.Common.Symbols;
 
 namespace Compiler.Interpret
 {

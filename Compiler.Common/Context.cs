@@ -1,5 +1,4 @@
 using Compiler.Common.Errors;
-using Compiler.Common.Symbols;
 
 namespace Compiler.Common
 {
