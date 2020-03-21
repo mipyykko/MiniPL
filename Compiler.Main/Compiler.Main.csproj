@@ -8,7 +8,6 @@
     <ProjectReference Include="..\Compiler.Interpret\Compiler.Interpret.csproj" />
     <ProjectReference Include="..\Compiler.Parse\Compiler.Parse.csproj" />
     <ProjectReference Include="..\Compiler.Scan\Compiler.Scan.csproj" />
-    <ProjectReference Include="..\Compiler.Symbols\Compiler.Symbols.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
