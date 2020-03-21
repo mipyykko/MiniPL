@@ -6,9 +6,9 @@ using Compiler.Common.Errors;
 using Compiler.Interpret;
 using static Compiler.Common.Util;
 
-namespace Compiler.Common
+namespace Compiler.Interpret
 {
-    public class SymbolTableVisitor : Visitor
+    public class SemanticAnalysisVisitor : Visitor
     {
         private ISymbolTable SymbolTable => Context.SymbolTable;
         private IErrorService ErrorService => Context.ErrorService;
@@ -18,23 +18,60 @@ namespace Compiler.Common
             switch (node.Token.KeywordType)
             {
                 case KeywordType.Print:
+                {
+                    var type = node.Arguments[0].Accept(this);
+
+                    if (type == PrimitiveType.Int || type == PrimitiveType.String) return type;
+                    
+                    ErrorService.Add(
+                        ErrorType.TypeError,
+                        node.Arguments[0].Token,
+                        $"can only print Int or String types, got {type}"
+                    );
+                    return null;
+
+                }
                 case KeywordType.Assert:
-                    return node.Arguments[0].Accept(this);
+                {
+                    var type = node.Arguments[0].Accept(this);
+
+                    if (type == PrimitiveType.Bool) return type;
+
+                    ErrorService.Add(
+                        ErrorType.TypeError,
+                        node.Arguments[0].Token,
+                        $"can only assert Boolean expressions, got {type}"
+                    );
+                    return null;
+                }
                 case KeywordType.Read:
+                {
                     var id = ((VariableNode) node.Arguments[0]).Token.Content;
+                    var type = node.Arguments[0].Accept(this);
+
+                    if (type != PrimitiveType.Int && type != PrimitiveType.String)
+                    {
+                        ErrorService.Add(
+                            ErrorType.TypeError,
+                            node.Arguments[0].Token,
+                            $"can only read Int or String types, got {type}"
+                        );
+                        return null;
+                    }
 
                     if (SymbolTable.IsControlVariable(id))
                     {
                         ErrorService.Add(
-                            ErrorType.AssignmentToControlVariable, 
+                            ErrorType.AssignmentToControlVariable,
                             node.Arguments[0].Token,
-                            $"can't assign read result to control variable {id}", 
+                            $"can't assign read result to control variable {id}",
                             true
                         );
                         return null;
                     }
 
-                    return node.Arguments[0].Accept(this);
+                    return type; 
+                }
             }
 
             return null;
@@ -74,7 +111,7 @@ namespace Compiler.Common
         {
             var id = node.Id.Token.Content;
             var type = node.Type;
-            var expressionType = node.Expression.Accept(this);
+            node.Expression.Accept(this);
 
             if (node.Token?.KeywordType != KeywordType.Var)
             {
@@ -169,9 +206,7 @@ namespace Compiler.Common
 
         public override object Visit(ExpressionNode node)
         {
-            var type = node.Expression.Accept(this);
-            Console.WriteLine($"ExpressionNode got type {type}");
-            return type;
+            return node.Expression.Accept(this);
         }
     }
 }

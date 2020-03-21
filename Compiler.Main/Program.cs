@@ -2,7 +2,7 @@
 
 namespace Compiler.Main
 {
-    internal class Program
+    internal static class Program
     {
         public static void Main(string[] args)
         {
@@ -38,7 +38,7 @@ for i in 1..n do
 end for;
 print ""The result is: "";
 print v;";
-            var c = new Compiler(test1);
+            var c = new Compiler(test3);
         }
     }
 }

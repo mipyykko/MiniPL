@@ -7,6 +7,7 @@ using Compiler.Common.Errors;
 using Compiler.Interpret;
 using Moq;
 using NUnit.Framework;
+using static Compiler.Tests.TestUtil;
 
 namespace Compiler.Tests
 {
@@ -14,20 +15,37 @@ namespace Compiler.Tests
     {
         private Mock<IErrorService> errorServiceMock;
         private Mock<ISymbolTable> symbolTableMock;
+        private ISymbolTable symbolTable;
         private ProgramVisitor visitor;
         private Mock<IProgramMemory> memoryMock;
+        private IProgramMemory memory;
         
         [SetUp]
         public void Setup()
         {
             errorServiceMock = new Mock<IErrorService>();
-            symbolTableMock = new Mock<ISymbolTable>();
-            Context.ErrorService = errorServiceMock.Object;
-            Context.SymbolTable = symbolTableMock.Object;
+            symbolTableMock = new Mock<ISymbolTable>
+            {
+                CallBase = true
+            };
+            symbolTable = symbolTableMock.Object;
+            symbolTable.DeclareSymbol("a", PrimitiveType.Int);
+            symbolTable.DeclareSymbol("b", PrimitiveType.String);
+            symbolTable.DeclareSymbol("c", PrimitiveType.Bool);
 
-            memoryMock = new Mock<IProgramMemory>();
-            
-            visitor = new ProgramVisitor(memoryMock.Object);
+            Context.ErrorService = errorServiceMock.Object;
+            Context.SymbolTable = symbolTable;
+
+            memoryMock = new Mock<IProgramMemory>
+            {
+                CallBase = true
+            };
+            memory = memoryMock.Object;
+            memory.UpdateVariable("a", "6");
+            memory.UpdateVariable("b", "koira");
+            memory.UpdateVariable("c", "true");
+
+            visitor = new ProgramVisitor(memory);
         }
         
         [TearDown]
@@ -51,14 +69,15 @@ namespace Compiler.Tests
                     TokenType.Keyword,
                     kwt,
                     "",
-                    SourceInfo.Of((0, 0), (0, 0, 0))
+                    MockSourceInfo
                 ),
                 Arguments = new List<Node> {node}
             };
         }
         
         [TestCase("kissa")]
-        public void StatementNodePrintTests(string ret)
+        [TestCase(6)]
+        public void StatementNodePrintTests(dynamic ret)
         {
             var mockNode = new Mock<LiteralNode>();
             mockNode.Setup(n => n.Accept(visitor)).Returns(ret);
@@ -70,7 +89,7 @@ namespace Compiler.Tests
             visitor.Visit(node);
             
             mockNode.Verify(n => n.Accept(visitor), Times.Once);
-            Assert.AreEqual(ret, output.ToString());
+            Assert.AreEqual(ret.ToString(), output.ToString());
         }
 
         [TestCase(true)]
@@ -100,34 +119,36 @@ namespace Compiler.Tests
             }
         }
 
-        [TestCase("a", "kissa", true)]
-        [TestCase("a", "6")]
-        public void StatementNodeReadTests(string id, string input, bool error = false)
+        [TestCase("a",  "kissa", ErrorType.TypeError)]
+        [TestCase("a",  "666")]
+        [TestCase("b", "kissa")]
+        [TestCase("b",  "kissa koira", ErrorType.InputError)]
+        [TestCase("a",  "666 8", ErrorType.InputError)]
+        [TestCase("c",  "667", ErrorType.TypeError)]
+        public void StatementNodeReadTests(string id, string input, ErrorType errorType = ErrorType.Unknown)
         {
             var mockNode = new Mock<VariableNode>();
             var argumentToken = Token.Of(
                 TokenType.Identifier,
                 KeywordType.Unknown,
                 id,
-                SourceInfo.Of((0, 0), (0, 0, 0))
+                MockSourceInfo
             );
             mockNode.Setup(n => n.Token).Returns(argumentToken);
             var node = CreateStatementNode(KeywordType.Read, mockNode.Object);
             
-            memoryMock.Setup(m => m.UpdateVariable(id, input, false)).Returns(error ? ErrorType.TypeError : ErrorType.Unknown);
-            symbolTableMock.Setup(s => s.LookupSymbol(id)).Returns(PrimitiveType.Int);
-
             var inputStream = new StringReader($"{input}\n");
             Console.SetIn(inputStream);
             
             visitor.Visit(node);
 
-            memoryMock.Verify(m => m.UpdateVariable(id, input, false), Times.Once);
+            memoryMock.Verify(m => m.UpdateVariable(id, input, false), 
+                errorType != ErrorType.InputError ? Times.Once() : Times.Never());
 
-            if (error)
+            if (errorType != ErrorType.Unknown)
             {
                 errorServiceMock.Verify(e => e.Add(
-                    ErrorType.TypeError,
+                    errorType,
                     argumentToken,
                     It.IsAny<string>(),
                     true
@@ -154,7 +175,7 @@ namespace Compiler.Tests
                         TokenType.Identifier,
                         KeywordType.Unknown,
                         "a",
-                        SourceInfo.Of((0, 0), (0, 0, 0))
+                        MockSourceInfo
                     )
                 },
                 RangeStart = startNodeMock.Object,
@@ -248,7 +269,7 @@ namespace Compiler.Tests
                 TokenType.Operator,
                 KeywordType.Unknown,
                 op,
-                SourceInfo.Of((0, 0), (0, 0, 0))
+                MockSourceInfo
             );
             var node = new BinaryNode
             {
@@ -289,7 +310,7 @@ namespace Compiler.Tests
                 TokenType.Operator,
                 KeywordType.Unknown,
                 op,
-                SourceInfo.Of((0, 0), (0, 0, 0))
+                MockSourceInfo
             );
 
             var node = new UnaryNode
@@ -327,7 +348,7 @@ namespace Compiler.Tests
                 TokenType.Identifier,
                 KeywordType.Unknown,
                 id,
-                SourceInfo.Of((0, 0), (0, 0, 0))
+                MockSourceInfo
             );
             var node = new AssignmentNode
             {
@@ -357,7 +378,7 @@ namespace Compiler.Tests
                     tt,
                     KeywordType.Unknown,
                     content,
-                    SourceInfo.Of((0, 0), (0, 0, 0))
+                    MockSourceInfo
                 )
             };
             visitor.Visit(node);
@@ -373,7 +394,7 @@ namespace Compiler.Tests
                 TokenType.Identifier,
                 KeywordType.Unknown,
                 id,
-                SourceInfo.Of((0, 0), (0, 0, 0))
+                MockSourceInfo
             );
             var node = new VariableNode
             {

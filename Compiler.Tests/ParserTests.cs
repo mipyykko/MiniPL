@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using Compiler.Common;
 using Compiler.Common.AST;
 using Compiler.Common.Errors;
@@ -8,18 +6,16 @@ using Compiler.Parse;
 using Compiler.Scan;
 using Moq;
 using NUnit.Framework;
-using Snapper;
 
 namespace Compiler.Tests
 {
-    [ExcludeFromCodeCoverage]
-    [TestFixture]
     public class ParserTests
     {
         [TestCase("a := 1;", "Assignment", TokenType.Assignment, KeywordType.Unknown)]
         [TestCase("a := a + 1;", "Assignment", TokenType.Assignment, KeywordType.Unknown)]
         [TestCase("a := -1;", "Assignment", TokenType.Assignment, KeywordType.Unknown)]
         [TestCase("a := a * -1;", "Assignment", TokenType.Assignment, KeywordType.Unknown)]
+        [TestCase("a := -a;", "Assignment", TokenType.Assignment, KeywordType.Unknown)]
         [TestCase("assert(1 < 2);", "Statement", TokenType.Keyword, KeywordType.Assert)]
         [TestCase("assert(!(1 < 2));", "Statement", TokenType.Keyword, KeywordType.Assert)]
         [TestCase("print a;", "Statement", TokenType.Keyword, KeywordType.Print)]
@@ -142,79 +138,6 @@ namespace Compiler.Tests
                     It.Is<string>(s => s.Contains(errorString)),
                     false
                 ));
-            }
-        }
-
-        [TestFixture]
-        public class TreeTests
-        {
-            private static Scanner scanner;
-            private static Parser parser;
-
-            [SetUp]
-            public void Setup()
-            {
-                Context.ErrorService = new ErrorService();
-                Context.SymbolTable = new SymbolTable();
-
-                scanner = new Scanner();
-                parser = new Parser(scanner);
-            }
-
-            [TearDown]
-            public void Teardown()
-            {
-                var sin = new StreamReader(Console.OpenStandardInput());
-                Console.SetIn(sin);
-
-                var sout = new StreamWriter(Console.OpenStandardOutput())
-                {
-                    AutoFlush = true
-                };
-                Console.SetOut(sout);
-            }
-
-            [TestFixture]
-            public class Program3
-            {
-                [SetUp]
-                public void Setup()
-                {
-                    var source = $@"print ""Give a number: "";
-var n : int;
-read n;
-var v : int := 1;
-var i : int;
-for i in 1..n do
-    v := v * i;
-end for;
-print ""The result is: "";
-print v;
-assert (!(v < 0));";
-                    Context.Source = Text.Of(source);
-                    Context.ErrorService = new ErrorService();
-                    Context.SymbolTable = new SymbolTable();
-
-                    scanner = new Scanner();
-                    parser = new Parser(scanner);
-                }
-
-                [Test]
-                public void TreeTest()
-                {
-                    var tree = parser.Program();
-                    tree.ShouldMatchSnapshot();
-                }
-
-                [Test]
-                public void ASTTest()
-                {
-                    var output = new StringWriter();
-                    Console.SetOut(output);
-                    var tree = parser.Program();
-                    tree.AST();
-                    output.ToString().ShouldMatchSnapshot();
-                }
             }
         }
     }

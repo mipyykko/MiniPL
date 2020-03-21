@@ -123,11 +123,11 @@ EOF (125, 125) (4, 48, 48) Unknown ""EOF""";
             [Test]
             public void Valid()
             {
-                var program = $@"""kissa\t\t\\koira\n\n\32\64\255\0""";
+                var program = $@"""kissa\t\t\\koira\n\n\""\32\64\255\0""";
                 var tokens = Scan(program);
 
                 Assert.AreEqual(
-                    "kissa\t\t\\koira\n\n\x20\x40\xFF\x0", 
+                    "kissa\t\t\\koira\n\n\"\x20\x40\xFF\x0", 
                     tokens[0].Content);
             }
 

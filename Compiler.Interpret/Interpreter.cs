@@ -1,5 +1,5 @@
-using System;
 using Compiler.Common;
+using Compiler.Common.Symbols;
 using Node = Compiler.Common.AST.Node;
 
 namespace Compiler.Interpret
@@ -12,7 +12,7 @@ namespace Compiler.Interpret
         public Interpreter(Node tree)
         {
             _tree = tree;
-            Visitor v = new ProgramVisitor(new ProgramMemory());
+            var v = new ProgramVisitor(new ProgramMemory());
             _tree.Accept(v);
         }
     }

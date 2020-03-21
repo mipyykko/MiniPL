@@ -12,12 +12,12 @@ namespace Compiler.Interpret
         private IErrorService ErrorService => Context.ErrorService;
         private ISymbolTable SymbolTable => Context.SymbolTable;
         private IProgramMemory _memory;
-        
+
         public ProgramVisitor(IProgramMemory memory)
         {
             _memory = memory;
         }
-        
+
         public override object Visit(StatementNode node)
         {
             switch (node.Token.KeywordType)
@@ -30,10 +30,10 @@ namespace Compiler.Interpret
                     if (result != true)
                     {
                         ErrorService.Add(
-                            ErrorType.AssertionError, 
-                            node.Token, 
+                            ErrorType.AssertionError,
+                            node.Token,
                             $"assertion failed: {node.Arguments[0].Representation()}",
-                        true
+                            true
                         );
                     }
 
@@ -41,21 +41,33 @@ namespace Compiler.Interpret
                 case KeywordType.Read:
                 {
                     var id = ((VariableNode) node.Arguments[0]).Token.Content;
-                    var value = Console.ReadLine();
+                    var type = SymbolTable.LookupSymbol(id);
+                    var input = Console.ReadLine();
+                    var inputValues = input.Split(new[] {'\n', ' ', '\t', '\r'});
+
+                    if (inputValues.Length == 0 || inputValues.Length > 1)
+                    {
+                        ErrorService.Add(
+                            ErrorType.InputError,
+                            node.Arguments[0].Token,
+                            $"invalid input: {input}",
+                            true
+                        );
+                    }
+
+                    var value = inputValues[0];
+                    var guessedType = GuessType(value);
 
                     var errorType = _memory.UpdateVariable(id, value);
 
-                    switch (errorType)
+                    if (errorType == ErrorType.TypeError || guessedType != type)
                     {
-                        case ErrorType.TypeError:
-                            ErrorService.Add(
-                                errorType, 
-                                node.Arguments[0].Token, 
-                                $"type error: expected {SymbolTable.LookupSymbol(id)}, got {GuessType(value)}", 
-                                true);
-                            break;
-                        default:
-                            break;
+                        ErrorService.Add(
+                            ErrorType.TypeError,
+                            node.Arguments[0].Token,
+                            $"type error: expected {SymbolTable.LookupSymbol(id)}, got {guessedType}",
+                            true);
+                        // should handle control variable error by itself 
                     }
 
                     break;
@@ -152,9 +164,9 @@ namespace Compiler.Interpret
                     return opnd1.Equals(opnd2);
                 default:
                     ErrorService.Add(
-                        ErrorType.InvalidOperation, 
-                        node.Token, 
-                    $"invalid binary operation {node.Token.Content}" // TODO: operands?
+                        ErrorType.InvalidOperation,
+                        node.Token,
+                        $"invalid binary operation {node.Token.Content}" // TODO: operands?
                     );
                     break;
             }
@@ -191,7 +203,7 @@ namespace Compiler.Interpret
             var type = node.Type;
 
             var newValue = value ?? DefaultValue(type);
-            
+
             _memory.UpdateVariable(id, newValue);
 
             return newValue;

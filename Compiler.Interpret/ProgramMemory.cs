@@ -9,7 +9,7 @@ namespace Compiler.Interpret
         private readonly Dictionary<string, object> _memory = new Dictionary<string, object>();
         private ISymbolTable SymbolTable => Context.SymbolTable;
         
-        public ErrorType UpdateVariable(string id, object value = null, bool control = false)
+        public ErrorType UpdateVariable(string id, dynamic value = null, bool control = false)
         {
             if (!control && SymbolTable.IsControlVariable(id))
             {
@@ -38,12 +38,12 @@ namespace Compiler.Interpret
         }
 
 
-        public object LookupVariable(string id)
+        public dynamic LookupVariable(string id)
         {
             return _memory[id];
         }
         
-        public object ParseResult(PrimitiveType type, object value)
+        public dynamic ParseResult(PrimitiveType type, dynamic value)
         {
 
             // try

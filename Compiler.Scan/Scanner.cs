@@ -118,14 +118,13 @@ namespace Compiler.Scan
         {
             ['n'] = "\n",
             ['t'] = "\t",
-            ['\\'] = "\\"
+            ['\\'] = "\\",
+            ['"'] = "\""
         };
 
         private string GetStringContents()
         {
             var str = new StringBuilder();
-
-            string error = null;
 
             while (!Source.IsExhausted)
             {

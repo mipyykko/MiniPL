@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Runtime.InteropServices.ComTypes;
-using Compiler.Common;
-using static Compiler.Common.Util;
+﻿using System.Collections.Generic;
 
-namespace Compiler.Common
+namespace Compiler.Common.Symbols
 {
     public class SymbolTable : ISymbolTable
     {

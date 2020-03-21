@@ -1,20 +1,22 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using Compiler.Common;
 using Compiler.Common.AST;
 using Compiler.Common.Errors;
+using Compiler.Common.Symbols;
+using Compiler.Interpret;
 using Moq;
 using NUnit.Framework;
+using static Compiler.Tests.TestUtil;
 
 namespace Compiler.Tests
 {
-    public class SymbolTableVisitorTests
+    public class SemanticAnalysisVisitorTests
     {
         private ISymbolTable symbolTable;
         private Mock<SymbolTable> symbolTableMock;
         private Mock<IErrorService> errorServiceMock;
-        private SymbolTableVisitor visitor;
+        private SemanticAnalysisVisitor visitor;
         
         [SetUp]
         public void Setup()
@@ -27,6 +29,8 @@ namespace Compiler.Tests
             symbolTable = symbolTableMock.Object;
             symbolTable.DeclareSymbol("a", PrimitiveType.Int);
             symbolTable.DeclareSymbol("b", PrimitiveType.Int);
+            symbolTable.DeclareSymbol("c", PrimitiveType.String);
+            symbolTable.DeclareSymbol("d", PrimitiveType.Bool);
             symbolTable.SetControlVariable("a");
 
             errorServiceMock = new Mock<IErrorService>();
@@ -34,7 +38,7 @@ namespace Compiler.Tests
             Context.SymbolTable = symbolTable;
             Context.ErrorService = errorServiceMock.Object;
             
-            visitor = new SymbolTableVisitor();
+            visitor = new SemanticAnalysisVisitor();
         }
 
         [TearDown]
@@ -44,25 +48,34 @@ namespace Compiler.Tests
             Context.ErrorService = null;
         }
 
-        [TestCase(KeywordType.Print)]
-        [TestCase(KeywordType.Assert)]
-        [TestCase(KeywordType.Read, "a", true)]
+        [TestCase(KeywordType.Print, "a")]
+        [TestCase(KeywordType.Print, "b")]
+        [TestCase(KeywordType.Print, "c")]
+        [TestCase(KeywordType.Print, "d", ErrorType.TypeError)]
+        [TestCase(KeywordType.Assert, "d")]
+        [TestCase(KeywordType.Assert, "b", ErrorType.TypeError)]
+        [TestCase(KeywordType.Read, "a", ErrorType.AssignmentToControlVariable, true)]
         [TestCase(KeywordType.Read, "b")]
-        public void StatementTests(KeywordType kwt, string id = null, bool error = false)
+        [TestCase(KeywordType.Read, "c")]
+        [TestCase(KeywordType.Read, "d", ErrorType.TypeError)]
+        public void StatementTests(KeywordType kwt, string id = null, ErrorType errorType = ErrorType.Unknown, bool critical = false)
         {
+            var error = errorType != ErrorType.Unknown;
+            var type = id != null ? symbolTable.LookupSymbol(id) : PrimitiveType.Void;
+            
             var argument = new Mock<VariableNode>();
             var idToken = Token.Of(
                 TokenType.Identifier,
                 KeywordType.Unknown,
                 id,
-                SourceInfo.Of((0, 0), (0, 0, 0))
+                MockSourceInfo
             );
             argument.Setup(a => a.Token).Returns(idToken);
-            argument.Setup(a => a.Accept(It.IsAny<SymbolTableVisitor>())).Returns("ok");
+            argument.Setup(a => a.Accept(It.IsAny<SemanticAnalysisVisitor>())).Returns(type);
 
             var node = new StatementNode
             {
-                Token = Token.Of(TokenType.Keyword, kwt, "", SourceInfo.Of((0,0), (0,0,0))),
+                Token = Token.Of(TokenType.Keyword, kwt, "", MockSourceInfo),
                 Arguments = new List<Node>
                 {
                     argument.Object
@@ -74,16 +87,19 @@ namespace Compiler.Tests
             if (error)
             {
                 errorServiceMock.Verify(es => es.Add(
-                    ErrorType.AssignmentToControlVariable,
+                    errorType,
                     idToken,
                     It.IsAny<string>(),
-                    true
+                    critical
                 ));
+                Assert.AreEqual(null, ret);
+            }
+            else
+            {
+                Assert.AreEqual(type, ret);                
             }
             
-            argument.Verify(l => l.Accept(visitor),
-                error ? Times.Never() : Times.Once());
-            Assert.AreEqual(error ? null : "ok", ret);
+            argument.Verify(l => l.Accept(visitor), Times.Once());
         }
 
         [Test]
@@ -111,7 +127,7 @@ namespace Compiler.Tests
             mockNode.SetupSequence(n => n.Accept(visitor))
                 .Returns(type1)
                 .Returns(type2);
-            var token = Token.Of(TokenType.Operator, KeywordType.Unknown, "+", SourceInfo.Of((0, 0), (0, 0, 0)));
+            var token = Token.Of(TokenType.Operator, KeywordType.Unknown, "+", MockSourceInfo);
 
             var node = new BinaryNode
             {
@@ -158,7 +174,7 @@ namespace Compiler.Tests
         [TestCase("a", false, PrimitiveType.Void, PrimitiveType.Int, ErrorType.AssignmentToControlVariable)]
         [TestCase("c", true, PrimitiveType.Int, PrimitiveType.Int)]
         [TestCase("c", true, PrimitiveType.String, PrimitiveType.Int, ErrorType.TypeError)]
-        [TestCase("c", false, PrimitiveType.Void, PrimitiveType.Int, ErrorType.UndeclaredVariable)]
+        [TestCase("e", false, PrimitiveType.Void, PrimitiveType.Int, ErrorType.UndeclaredVariable)]
         public void AssignmentNodeTest(string id, bool isVar, PrimitiveType type, PrimitiveType expressionType, params ErrorType[] ets)
         {
             var mockNode = new Mock<LiteralNode>();
@@ -167,13 +183,13 @@ namespace Compiler.Tests
                 TokenType.Unknown,
                 KeywordType.Unknown,
                 "",
-                SourceInfo.Of((0, 0), (0, 0, 0))));
+                MockSourceInfo));
             
             var idToken = Token.Of(
                 TokenType.Identifier,
                 KeywordType.Unknown,
                 id,
-                SourceInfo.Of((0, 0), (0, 0, 0))
+                MockSourceInfo
             );
 
             var node = new AssignmentNode
@@ -186,7 +202,7 @@ namespace Compiler.Tests
                     TokenType.Assignment,
                     isVar ? KeywordType.Var : KeywordType.Unknown,
                     "",
-                    SourceInfo.Of((0,0), (0,0,0))
+                    MockSourceInfo
                 ),
                 Type = type,
                 Expression = mockNode.Object
@@ -214,7 +230,7 @@ namespace Compiler.Tests
         }
 
         [TestCase("a", PrimitiveType.Int)]
-        [TestCase("c", PrimitiveType.Void, true)]
+        [TestCase("e", PrimitiveType.Void, true)]
         public void VariableNodeTest(string id, PrimitiveType expectedType, bool error = false)
         {
             var node = new VariableNode
@@ -223,7 +239,7 @@ namespace Compiler.Tests
                     TokenType.Identifier,
                     KeywordType.Unknown,
                     id,
-                    SourceInfo.Of((0, 0), (0, 0, 0))),
+                    MockSourceInfo),
             };
 
             var ret = visitor.Visit(node);
@@ -250,8 +266,7 @@ namespace Compiler.Tests
             {
                 Type = PrimitiveType.Int
             };
-            var ret = visitor.Visit(node);
-            Assert.AreEqual(PrimitiveType.Int, ret);
+            Assert.AreEqual(PrimitiveType.Int, visitor.Visit(node));
         }
 
         [Test]
@@ -275,7 +290,7 @@ namespace Compiler.Tests
                 TokenType.Identifier,
                 KeywordType.Unknown,
                 id,
-                SourceInfo.Of((0, 0), (0, 0, 0)))
+                MockSourceInfo)
             );
             
             var node = new ForNode

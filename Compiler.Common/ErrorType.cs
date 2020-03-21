@@ -15,6 +15,7 @@ namespace Compiler.Common
         AssignmentToControlVariable,
         InvalidRange,
         InvalidOperation,
-        UnterminatedStringTerminal
+        UnterminatedStringTerminal,
+        InputError
     }
 }

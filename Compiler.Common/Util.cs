@@ -49,7 +49,7 @@ namespace Compiler.Common
             return PrimitiveType.String;
         }
         
-        public static object DefaultValue(PrimitiveType pt) => pt switch
+        public static dynamic DefaultValue(PrimitiveType pt) => pt switch
         {
             PrimitiveType.Bool => false,
             PrimitiveType.Int => 0,

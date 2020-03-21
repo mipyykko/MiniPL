@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Compiler.Interpret;
 using static Compiler.Common.Util;
 
 namespace Compiler.Common.AST
@@ -10,7 +9,7 @@ namespace Compiler.Common.AST
         public virtual string Name => "Node";
 
         public Node Parent { get; set; }
-        public object Value { get; set; }
+        public dynamic Value { get; set; }
         public abstract Token Token { get; set; }
         public abstract PrimitiveType Type { get; set; }
 
@@ -19,7 +18,7 @@ namespace Compiler.Common.AST
             return $"{Type} {Value}";
         }
 
-        public abstract object Accept(Visitor visitor);
+        public abstract dynamic Accept(Visitor visitor);
 
         public virtual void AST(int depth = 0)
         {
@@ -39,7 +38,7 @@ namespace Compiler.Common.AST
         public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; }
 
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {
@@ -61,7 +60,7 @@ namespace Compiler.Common.AST
 
         public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; }
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {
@@ -79,12 +78,10 @@ namespace Compiler.Common.AST
 
         public new Node Value;
 
-        private PrimitiveType _type;
-
         public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; }
 
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {
@@ -108,7 +105,7 @@ namespace Compiler.Common.AST
         public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; } = PrimitiveType.Void;
 
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {
@@ -130,7 +127,7 @@ namespace Compiler.Common.AST
 
         public override PrimitiveType Type { get; set; }
         public override Token Token { get; set; }
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {
@@ -149,7 +146,7 @@ namespace Compiler.Common.AST
 
         public override Token Token { get; set; }
 
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {
@@ -166,7 +163,7 @@ namespace Compiler.Common.AST
         public Node Id;
 
         public override PrimitiveType Type { get; set; }
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {
@@ -193,7 +190,7 @@ namespace Compiler.Common.AST
 
         public override Token Token { get; set; }
 
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {
@@ -218,7 +215,7 @@ namespace Compiler.Common.AST
         // } 
         public override Token Token { get; set; }
 
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {
@@ -245,7 +242,7 @@ namespace Compiler.Common.AST
         }
 
         public override Token Token { get; set; }
-        public override object Accept(Visitor visitor) => visitor.Visit(this);
+        public override dynamic Accept(Visitor visitor) => visitor.Visit(this);
 
         public override void AST(int depth = 0)
         {

@@ -1,6 +1,7 @@
 ﻿using System;
 using Compiler.Common;
 using Compiler.Common.Errors;
+using Compiler.Common.Symbols;
 using Compiler.Interpret;
 using Compiler.Scan;
 using Text = Compiler.Common.Text;
@@ -19,7 +20,7 @@ namespace Compiler.Main
             var scanner = new Scanner();
             var parser = new Parser(scanner);
             var tree = parser.Program();
-            var symbolTableVisitor = new SymbolTableVisitor();
+            var symbolTableVisitor = new SemanticAnalysisVisitor();
             tree.Accept(symbolTableVisitor);
             
             tree.AST();

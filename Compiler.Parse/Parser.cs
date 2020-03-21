@@ -85,6 +85,21 @@ namespace Compiler.Parse
             ParseError(ErrorType.UnexpectedToken, errorToken, sb.ToString());
         }
 
+        private void UnexpectedContentError(params string[] sl)
+        {
+            var sb = new StringBuilder();
+            sb.Append(
+                sl.Length switch
+                {
+                    0 => $"unexpected token {InputTokenContent} of type {InputTokenType}",
+                    1 => $"expected {sl[0]}, got {InputTokenContent}",
+                    _ => $"expected one of {string.Join(", ", sl)}, got {InputTokenContent}"
+                }
+            );
+            var errorToken = _inputToken;
+            SkipToTokenType(TokenType.Separator);
+            ParseError(ErrorType.SyntaxError, errorToken, sb.ToString());
+        }
         private void NextToken() => _inputToken = _scanner.GetNextToken();
         
         private KeywordType[] StatementFirstKeywords =>
@@ -110,7 +125,7 @@ namespace Compiler.Parse
             };
         }
 
-        private object Match(object match)
+        private dynamic Match(object match)
         {
             try
             {
@@ -568,7 +583,6 @@ namespace Compiler.Parse
             if (InputTokenType == tt)
             {
                 NextToken();
-                Console.WriteLine("matched token {0}", tt);
                 return matchedToken;
             }
 
@@ -582,7 +596,6 @@ namespace Compiler.Parse
             if (InputTokenKeywordType == kwt)
             {
                 NextToken();
-                Console.WriteLine("matched keyword {0}", kwt);
                 return matchedToken;
             }
 
@@ -593,13 +606,11 @@ namespace Compiler.Parse
         private Token MatchKeywordType(KeywordType[] kwtl)
         {
             var matchedToken = _inputToken;
-            foreach (var kwt in kwtl)
-                if (InputTokenKeywordType == kwt)
-                {
-                    NextToken();
-                    Console.WriteLine("matched keyword {0}", kwt);
-                    return matchedToken;
-                }
+            if (kwtl.Any(kwt => InputTokenKeywordType == kwt))
+            {
+                NextToken();
+                return matchedToken;
+            }
 
             UnexpectedKeywordError(kwtl);
             return matchedToken;
@@ -619,11 +630,7 @@ namespace Compiler.Parse
                 return true;
             }
 
-            // TODO: (?) create UnexpectedContent or whatever
-            var errorToken = _inputToken;
-            SkipToTokenType(TokenType.Separator);
-            ParseError(ErrorType.SyntaxError, errorToken,
-                $"expected one of {string.Join(", ", sl)}, got {errorToken.Content}");
+            UnexpectedContentError(sl);
             return false;
         }
     }
