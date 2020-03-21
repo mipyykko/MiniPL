@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETCore.App">
+      <Version>3.0.0-preview8-28405-07</Version>
+    </PackageReference>
+    <ProjectReference Include="..\MiniPL.Common\MiniPL.Common.csproj" />
+    <ProjectReference Include="..\MiniPL.Interpret\MiniPL.Interpret.csproj" />
+    <ProjectReference Include="..\MiniPL.Parse\MiniPL.Parse.csproj" />
+    <ProjectReference Include="..\MiniPL.Scan\MiniPL.Scan.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>MiniPL.Main</RootNamespace>
+  </PropertyGroup>
+
+</Project>

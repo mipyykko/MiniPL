@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\MiniPL.Common\MiniPL.Common.csproj" />
+    <ProjectReference Include="..\MiniPL.Scan\MiniPL.Scan.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>MiniPL.Parse</RootNamespace>
+  </PropertyGroup>
+
+</Project>
