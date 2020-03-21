@@ -4,6 +4,7 @@ using System.IO;
 using Compiler.Common;
 using Compiler.Common.AST;
 using Compiler.Common.Errors;
+using Compiler.Common.Symbols;
 using Compiler.Interpret;
 using Moq;
 using NUnit.Framework;

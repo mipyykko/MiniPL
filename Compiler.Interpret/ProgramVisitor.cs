@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Compiler.Common;
 using Compiler.Common.AST;
 using Compiler.Common.Errors;
+using Compiler.Common.Symbols;
 using static Compiler.Common.Util;
 
 namespace Compiler.Interpret

@@ -1,10 +1,8 @@
 using System;
-using System.Linq;
 using Compiler.Common;
 using Compiler.Common.AST;
 using Compiler.Common.Errors;
-using Compiler.Interpret;
-using static Compiler.Common.Util;
+using Compiler.Common.Symbols;
 
 namespace Compiler.Interpret
 {
