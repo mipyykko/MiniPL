@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using Compiler.Common;
 using Compiler.Common.Errors;
+using Compiler.Common.Symbols;
 using Compiler.Interpret;
 using Compiler.Parse;
 using Compiler.Scan;
 using NUnit.Framework;
 using Snapper;
-using Snapper.Attributes;
 
 namespace Compiler.Tests
 {

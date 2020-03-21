@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Compiler.Common;
+using Compiler.Common.Symbols;
 using Microsoft.VisualStudio.TestPlatform.Common.Utilities;
 using NUnit.Framework;
 
