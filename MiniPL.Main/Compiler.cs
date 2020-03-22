@@ -23,9 +23,15 @@ namespace MiniPL.Main
             var semanticAnalysisVisitor = new SemanticAnalysisVisitor();
             tree.Accept(semanticAnalysisVisitor);
             
-            new Interpreter(tree);
+            if (Context.Options.AST) tree.AST();
+
+            if (Context.ErrorService.HasErrors())
+            {
+                Context.ErrorService.Throw();
+            }
             
-            Context.ErrorService.Throw();
+            var _ = new Interpreter(tree);
+            
         }
     }
 }

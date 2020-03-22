@@ -53,7 +53,6 @@ namespace MiniPL.Parse
 
         private void UnexpectedError<T>(ErrorType type, IReadOnlyList<T> items)
         {
-            Console.WriteLine($"got error of type {type}");
             var message = type switch
             {
                 ErrorType.UnexpectedKeyword => items.Count switch

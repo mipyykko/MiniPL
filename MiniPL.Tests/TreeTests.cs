@@ -68,6 +68,9 @@ namespace MiniPL.Tests
             {
                 Context.Source = Text.Of(source);
                 var tree = parser.Program();
+
+                Assert.False(Context.ErrorService.HasErrors());
+
                 tree.ShouldMatchChildSnapshot(test);
             }
 
@@ -80,6 +83,7 @@ namespace MiniPL.Tests
 
                 Context.Source = Text.Of(source);
                 var tree = parser.Program();
+
                 tree.AST();
                 output.ToString().ShouldMatchChildSnapshot(test);
             }
@@ -90,8 +94,12 @@ namespace MiniPL.Tests
             {
                 Context.Source = Text.Of(source);
                 var tree = parser.Program();
+
                 var symbolTableVisitor = new SemanticAnalysisVisitor();
                 tree.Accept(symbolTableVisitor);
+
+                Assert.False(Context.ErrorService.HasErrors());
+                
                 tree.ShouldMatchChildSnapshot(test);
             }
             

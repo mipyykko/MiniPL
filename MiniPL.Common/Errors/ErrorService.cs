@@ -9,8 +9,6 @@ namespace MiniPL.Common.Errors
         private static Text Source => Context.Source;
         private static List<Error> _errors = new List<Error>();
 
-        public bool HasErrors => _errors.Count > 0;
-        
         public bool Add(ErrorType type, Token token, string message, bool critical = false)
         {
             _errors.Add(Error.Of(
@@ -28,20 +26,23 @@ namespace MiniPL.Common.Errors
 
         public void Throw()
         {
-            if (!HasErrors) return;
+            if (!HasErrors()) return;
             
+            Console.WriteLine($"\nErrors:\n=======");
             foreach (var error in _errors)
             {
+                Console.WriteLine();
                 var errorLine = error.Token.SourceInfo.LineRange.Line;
-                Console.WriteLine($"\nError:\n======\n{error.Message} on line {errorLine}:");
+                Console.WriteLine($"{error.Message} on line {errorLine}:");
                 for (var i = Math.Max(0, errorLine - 2); i < Math.Min(Source.Lines.Count, errorLine + 3); i++)
                 {
                     Console.WriteLine($"{i}: {Source.Lines[i]}");
-
                 }
 
             }
             Environment.Exit(1);
         }
+        
+        public bool HasErrors() => _errors.Count > 0;
     }
 }

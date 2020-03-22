@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Text;
 using MiniPL.Common.Errors;
 
 namespace MiniPL.Common
@@ -44,7 +45,7 @@ namespace MiniPL.Common
             var startPos = Pos;
             while (Pos < startPos + n && !IsExhausted)
             {
-                if (Current == '\n')
+                if ("\n\r".IndexOf(Current) >= 0)
                 {
                     Line++;
                     LinePos = 0;
@@ -125,12 +126,12 @@ namespace MiniPL.Common
         {
             var curr = Current;
 
-            while ((curr == ' ' || curr == '\n') && !IsExhausted) curr = Next();
+            while ("\r\n\t ".IndexOf(curr) >= 0 && !IsExhausted) curr = Next();
         }
 
         public void SkipLine()
         {
-            while (Current != '\n' && !IsExhausted) Advance();
+            while ("\r\n\v\xA".IndexOf(Current) < 0 && !IsExhausted) Advance();
             Advance();
         }
 

@@ -234,7 +234,10 @@ namespace MiniPL.Interpret
 
         public override object Visit(ExpressionNode node)
         {
-            return node.Expression.Accept(this);
+            var type = node.Expression.Accept(this);
+            node.Type = type;
+
+            return type;
         }
     }
 }

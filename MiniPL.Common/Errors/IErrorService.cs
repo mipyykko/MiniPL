@@ -4,5 +4,6 @@ namespace MiniPL.Common.Errors
     {
         public bool Add(ErrorType type, Token token, string message, bool critical = false);
         public void Throw();
+        public bool HasErrors();
     }
 }

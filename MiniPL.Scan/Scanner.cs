@@ -63,9 +63,9 @@ namespace MiniPL.Scan
                     if (kw != KeywordType.Unknown) return Token.Of(TokenType.Keyword, kw, atom, GetSourceInfo(atom));
                     return Token.Of(TokenType.Identifier, atom, GetSourceInfo(atom));
                 case TokenType.Unknown:
-                    var errorToken = Token.Of(TokenType.Unknown, $"{Current}", GetSourceInfo($"{Current}")); // TODO: error check?
                     Source.Advance();
-                    return errorToken;
+                    
+                    return GetNextToken(); // FIXME: last minute fix to fix whitespace problem :(
                 default:
                     return Token.Of(tokenType, token, GetSourceInfo(token));
             }
@@ -92,7 +92,7 @@ namespace MiniPL.Scan
         {
             var kw = new StringBuilder("");
 
-            while (!Source.IsExhausted && " \t\n".IndexOf(Current) < 0 && (char.IsLetter(Current) ||
+            while (!Source.IsExhausted && " \t\n\r".IndexOf(Current) < 0 && (char.IsLetter(Current) ||
                                                                            char.IsDigit(Current) || Current == '_'))
             {
                 kw.Append(Current);

@@ -30,7 +30,6 @@ namespace MiniPL.Tests
 
             var tree = (StatementListNode) parser.Program();
             var left = tree.Left;
-            Console.Write($"{program} {left.Name}");
 
             Assert.AreEqual(
                 "StatementList",
