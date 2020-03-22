@@ -9,6 +9,7 @@ using MiniPL.Parse;
 using MiniPL.Scan;
 using NUnit.Framework;
 using Snapper;
+using Snapper.Attributes;
 
 namespace MiniPL.Tests
 {

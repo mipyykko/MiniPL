@@ -16,7 +16,6 @@ namespace MiniPL.Scan
         private char Current => Source.Current;
         private char Peek => Source.Peek;
         private bool IsExhausted => Source.IsExhausted;
-
         private (int Start, int End) TokenRange(string token)
         {
             return (_startPos, _startPos + Math.Max(0, token.Length - 1));
@@ -64,7 +63,9 @@ namespace MiniPL.Scan
                     if (kw != KeywordType.Unknown) return Token.Of(TokenType.Keyword, kw, atom, GetSourceInfo(atom));
                     return Token.Of(TokenType.Identifier, atom, GetSourceInfo(atom));
                 case TokenType.Unknown:
-                    return Token.Of(TokenType.Unknown, $"{Current}", GetSourceInfo($"{Current}")); // TODO: error check?
+                    var errorToken = Token.Of(TokenType.Unknown, $"{Current}", GetSourceInfo($"{Current}")); // TODO: error check?
+                    Source.Advance();
+                    return errorToken;
                 default:
                     return Token.Of(tokenType, token, GetSourceInfo(token));
             }

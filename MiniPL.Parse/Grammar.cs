@@ -5,7 +5,7 @@ namespace MiniPL.Parse
 {
     public static class Grammar
     {
-        public static readonly KeywordType[] DefaultStatementFirstKeywords =
+        private static readonly KeywordType[] DefaultStatementFirstKeywords =
         {
             KeywordType.Var,
             KeywordType.For,
@@ -14,7 +14,7 @@ namespace MiniPL.Parse
             KeywordType.Assert
         };
         
-        public static readonly KeywordType[] DoBlockStatementFirstKeywords =
+        private static readonly KeywordType[] DoBlockStatementFirstKeywords =
             DefaultStatementFirstKeywords.Concat(new[] {KeywordType.End}).ToArray();
 
         public static readonly TokenType[] StatementFirstTokens = 
@@ -23,6 +23,12 @@ namespace MiniPL.Parse
             TokenType.Identifier
         };
         
+        public static KeywordType[] StatementFirstKeywords(bool isDoBlock = false) =>
+            isDoBlock
+                ? DoBlockStatementFirstKeywords
+                : DefaultStatementFirstKeywords;
+
+
         public static readonly TokenType[] ExpressionFirstTokens =
         {
             TokenType.IntValue,
@@ -45,9 +51,21 @@ namespace MiniPL.Parse
 
         public static readonly string[] UnaryOperators =
         {
-            "!",
-            "-"
+            "!", "-"
         };
+
+        public static readonly string[] BinaryOperators =
+        {
+            "+", "-", "*", "/", "&", "<", "="
+        };
+
+        public static readonly KeywordType[] ExpectedTypes =
+        {
+            KeywordType.Int,
+            KeywordType.String,
+            KeywordType.Bool
+        };
+
 
 
 

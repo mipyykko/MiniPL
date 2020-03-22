@@ -51,6 +51,7 @@ namespace MiniPL.Common
         False
     }
     
+    
     public class Token
     {
         public TokenType Type { get; private set; }
@@ -105,6 +106,18 @@ namespace MiniPL.Common
             ["&"] = TokenType.Operator, // And,
             // unary? how extensible would we want to be
             ["!"] = TokenType.Operator
+        };
+
+        public static Dictionary<string, OperatorType> OperatorToOperatorType = new Dictionary<string, OperatorType>()
+        {
+            ["*"] = OperatorType.Multiplication,
+            ["/"] = OperatorType.Division,
+            ["+"] = OperatorType.Addition,
+            ["-"] = OperatorType.Subtraction,
+            ["&"] = OperatorType.And,
+            ["="] = OperatorType.Equals,
+            ["<"] = OperatorType.LessThan,
+            ["!"] = OperatorType.Not
         };
 
         private static Dictionary<string, KeywordType> StringToKeywordType = new Dictionary<string, KeywordType>()

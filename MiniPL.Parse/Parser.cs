@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Net;
 using System.Text;
 using MiniPL.Common;
 using MiniPL.Common.AST;
@@ -21,12 +22,16 @@ namespace MiniPL.Parse
         private readonly Scanner _scanner;
         private Token _inputToken;
 
-        // private Node tree;
         private bool DoBlock { get; set; }
 
+        private void NextToken() => _inputToken = _scanner.GetNextToken();
         private KeywordType InputTokenKeywordType => _inputToken.KeywordType;
         private TokenType InputTokenType => _inputToken.Type;
         private string InputTokenContent => _inputToken.Content;
+        private string GetLine(Token t) => Source.Lines[t.SourceInfo.LineRange.Line];
+
+        private string GetErrorPosition(Token t) => new string(' ', Math.Max(0, t.SourceInfo.LineRange.Start))
+                                                    + new string('^', Math.Max(1, t.Content.Length));
 
         private static readonly Node NoOpStatement = new NoOpNode();
 
@@ -35,103 +40,90 @@ namespace MiniPL.Parse
             this._scanner = scanner;
         }
 
+        #region ErrorHandling
+
         private void ParseError(ErrorType type, Token errorToken, string message)
         {
-            var sb = new StringBuilder($"{GetLine(errorToken)}\n{GetErrorPosition(errorToken)}\n");
-            sb.Append(message);
-            var errorMessage = sb.ToString();
-            Console.WriteLine(errorMessage);
+            var errorMessage =
+                $"{GetLine(errorToken)}\n{GetErrorPosition(errorToken)}\n{message}";
             ErrorService.Add(type, errorToken, errorMessage);
-            
+
             throw new SyntaxErrorException(errorMessage);
         }
 
-        private string GetLine(Token t) => Source.Lines[t.SourceInfo.LineRange.Line];
-
-        private string GetErrorPosition(Token t) => new string(' ', Math.Max(0, t.SourceInfo.LineRange.Start))
-                                                    + new string('^', Math.Max(1, t.Content.Length));
-
-        private void UnexpectedKeywordError(params KeywordType[] kwts)
+        private void UnexpectedError<T>(ErrorType type, IReadOnlyList<T> items)
         {
-            var sb = new StringBuilder();
-            sb.Append(
-                kwts.Length switch
+            Console.WriteLine($"got error of type {type}");
+            var message = type switch
+            {
+                ErrorType.UnexpectedKeyword => items.Count switch
                 {
                     0 => $"unexpected keyword {InputTokenContent} of type {InputTokenKeywordType}",
-                    1 => $"expected keyword of type {kwts[0]}, got {InputTokenContent} of type {InputTokenKeywordType}",
+                    1 =>
+                    $"expected keyword of type {items[0]}, got {InputTokenContent} of type {InputTokenKeywordType}",
                     _ =>
-                    $"expected one of keyword types {string.Join(", ", kwts)}, got {InputTokenContent} of type {InputTokenKeywordType}"
-                }
-            );
-            var errorToken = _inputToken;
-            SkipToTokenType(TokenType.Separator);
-            ParseError(ErrorType.UnexpectedKeyword, errorToken, sb.ToString());
-        }
-
-        private void UnexpectedTokenError(params TokenType[] tts)
-        {
-            var sb = new StringBuilder();
-            sb.Append(
-                tts.Length switch
+                    $"expected one of keyword types {string.Join(", ", items)}, got {InputTokenContent} of type {InputTokenKeywordType}"
+                },
+                ErrorType.UnexpectedToken => items.Count switch
                 {
                     0 => $"unexpected token {InputTokenContent} of type {InputTokenType}",
-                    1 => $"expected token of type {tts[0]}, got {InputTokenContent} of type {InputTokenType}",
+                    1 => $"expected token of type {items[0]}, got {InputTokenContent} of type {InputTokenType}",
                     _ =>
-                    $"expected one of token types {string.Join(", ", tts)}, got {InputTokenContent} of type {InputTokenType}"
-                }
-            );
-            var errorToken = _inputToken;
-            SkipToTokenType(TokenType.Separator);
-            ParseError(ErrorType.UnexpectedToken, errorToken, sb.ToString());
-        }
-
-        private void UnexpectedContentError(params string[] sl)
-        {
-            var sb = new StringBuilder();
-            sb.Append(
-                sl.Length switch
+                    $"expected one of token types {string.Join(", ", items)}, got {InputTokenContent} of type {InputTokenType}"
+                },
+                ErrorType.SyntaxError => items.Count switch
                 {
-                    0 => $"unexpected token {InputTokenContent} of type {InputTokenType}",
-                    1 => $"expected {sl[0]}, got {InputTokenContent}",
-                    _ => $"expected one of {string.Join(", ", sl)}, got {InputTokenContent}"
-                }
-            );
-            var errorToken = _inputToken;
-            SkipToTokenType(TokenType.Separator);
-            ParseError(ErrorType.SyntaxError, errorToken, sb.ToString());
-        }
-        private void NextToken() => _inputToken = _scanner.GetNextToken();
-        
-        private KeywordType[] StatementFirstKeywords =>
-            DoBlock
-                ? DoBlockStatementFirstKeywords
-                : DefaultStatementFirstKeywords;
-
-        public Node Program()
-        {
-            NextToken();
-
-            MatchSequence(
-                StatementType.StatementList,
-                TokenType.EOF
-            ).Deconstruct(
-                out Node statements,
-                out Token _
-            );
-            return new StatementListNode
-            {
-                Left = statements,
-                Right = NoOpStatement
+                    0 => $"unexpected {InputTokenContent} of type {InputTokenType}",
+                    1 => $"expected {items[0]}, got {InputTokenContent}",
+                    _ => $"expected one of {string.Join(", ", items)}, got {InputTokenContent}"
+                },
+                _ => ""
             };
+            var errorToken = _inputToken;
+            if (items.GetType() == typeof(TokenType[]) && items.Any(i =>
+                (TokenType) (object) i == TokenType.Separator
+            ))
+            {
+                //SkipToTokenType(TokenType.Separator, false);
+                //NextToken();
+            } else {
+                NextToken();
+                SkipToTokenType(StatementFirstTokens /*TokenType.Separator*/);
+            }
+            ParseError(type, errorToken, message);
         }
 
-        private dynamic Match(object match)
+        private void UnexpectedKeywordError(params KeywordType[] kwts) =>
+            UnexpectedError(ErrorType.UnexpectedKeyword, kwts);
+
+        private void UnexpectedTokenError(params TokenType[] tts) =>
+            UnexpectedError(ErrorType.UnexpectedToken, tts);
+
+        private void UnexpectedOperatorError(params OperatorType[] ops) =>
+            UnexpectedError(ErrorType.InvalidOperation, ops);
+        
+        private void UnexpectedContentError(params string[] sl) =>
+            UnexpectedError(ErrorType.SyntaxError, sl);
+
+        private void SkipToTokenType(params TokenType[] tts)
+        {
+            while (!tts.Includes(InputTokenType) && InputTokenType != TokenType.EOF) NextToken();
+            // while (InputTokenType == tt && InputTokenType != TokenType.EOF) NextToken();
+        }
+        #endregion
+
+        #region Matching
+
+        private dynamic Match(dynamic match)
         {
             try
             {
                 return match switch
                 {
+                    _ when match is string op => MatchContent(op), 
+                    _ when match is string[] ops => MatchContent(ops), 
                     _ when match is TokenType tt => MatchTokenType(tt),
+                    _ when match is TokenType[] tts => MatchTokenType(tts),
                     _ when match is KeywordType kwt => MatchKeywordType(kwt),
                     _ when match is KeywordType[] kwts => MatchKeywordType(kwts),
                     StatementType.Statement => Statement(),
@@ -148,36 +140,155 @@ namespace MiniPL.Parse
                     StatementType.Type => Type(),
                     StatementType.Expression => Expression(),
                     StatementType.Operand => Operand(),
-                    StatementType.UnaryOperator => UnaryOperator(), // returns token
                     _ => ErrorService.Add(
                         ErrorType.InvalidOperation,
                         _inputToken,
-                        $"tried to match unknown token ${match}")
+                        $"tried to match unknown token {match}")
                 };
             }
             catch (SyntaxErrorException)
             {
-                return match switch
+                var error = true;
+                dynamic result = null;
+                while (error)
                 {
-                    _ when match is TokenType => _inputToken,
-                    _ when match is KeywordType => _inputToken,
-                    _ when match is KeywordType[] => _inputToken,
-                    StatementType.UnaryOperator => _inputToken,
-                    StatementType.Type => PrimitiveType.Void,
-                    _ => NoOpStatement
-                };
+                    try
+                    {
+                        error = false;
+                        result = match switch
+                        {
+                            _ when match is TokenType => _inputToken,
+                            _ when match is TokenType[] => _inputToken,
+                            _ when match is KeywordType => _inputToken,
+                            _ when match is KeywordType[] => _inputToken,
+                            _ when match is string => _inputToken,
+                            _ when match is string[] => _inputToken,
+                            StatementType.Type => PrimitiveType.Void,
+                            StatementType.StatementList => StatementList(),
+                            StatementType.StatementStatementList => StatementStatementList(),
+                            StatementType.Statement => Statement(),
+                            _ => NoOpStatement
+                        };
+                    }
+                    catch (SyntaxErrorException)
+                    {
+                        error = true;
+                    }
+                }
+
+                return result;
             }
         }
 
-        private object[] MatchSequence(params object[] seq)
+        private dynamic[] MatchSequence(params dynamic[] seq)
         {
             return seq.Select(Match).ToArray();
         }
 
-        private void SkipToTokenType(TokenType tt)
+        private Token MatchTokenType(TokenType[] ttl, bool advance = true)
         {
-            while (InputTokenType != tt && InputTokenType != TokenType.EOF) NextToken();
-            // if (InputTokenType != TokenType.EOF) NextToken();
+            var matchedToken = _inputToken;
+            if (ttl.Any(tt => InputTokenType == tt))
+            {
+                if (advance) NextToken();
+                return matchedToken;
+            }
+
+            UnexpectedTokenError(ttl);
+            return matchedToken;
+        }
+
+        private Token MatchTokenType(TokenType tt, bool advance = true) =>
+            MatchTokenType(new[] {tt}, advance);
+
+        private Token MatchKeywordType(KeywordType[] kwtl, bool advance = true)
+        {
+            var matchedToken = _inputToken;
+            if (kwtl.Any(kwt => InputTokenKeywordType == kwt))
+            {
+                if (advance) NextToken();
+                return matchedToken;
+            }
+
+            UnexpectedKeywordError(kwtl);
+            return matchedToken;
+        }
+
+        private Token MatchKeywordType(KeywordType kwt, bool advance = true) =>
+            MatchKeywordType(new [] {kwt}, advance);
+
+        private Token MatchOperatorType(OperatorType[] ops, bool advance = true)
+        {
+            var matchedToken = _inputToken;
+            var operatorType = Token.OperatorToOperatorType.TryGetValueOrDefault(InputTokenContent);
+            if (ops.Any(op => operatorType == op))
+            {
+                if (advance) NextToken();
+                return matchedToken;
+            }
+
+            UnexpectedOperatorError(ops);
+            return matchedToken;
+        }
+        
+        private Token MatchOperatorType(OperatorType op, bool advance = true) =>
+            MatchOperatorType(new[] {op}, advance);
+
+        private Token MatchContent(string s, bool advance = true)
+        {
+            var matchedToken = _inputToken;
+            if (InputTokenContent.Equals(s))
+            {
+                if (advance) NextToken();
+                return matchedToken;
+            }
+
+            UnexpectedContentError(s);
+            return matchedToken;
+        }
+
+        private Token MatchContent(string[] sl, bool advance = true)
+        {
+            var matchedToken = _inputToken;
+            if (sl.Any(InputTokenContent.Equals))
+            {
+                if (advance) NextToken();
+                return matchedToken;
+            }
+
+            UnexpectedContentError(sl);
+            return matchedToken;
+        }
+
+        private PrimitiveType Type()
+        {
+            var tt = MatchKeywordType(ExpectedTypes);
+            if (tt != null) return tt.KeywordType.ToPrimitiveType();
+
+            return PrimitiveType.Void;
+        }
+
+        #endregion Matching
+
+        public Node Program()
+        {
+            NextToken();
+
+            return StatementStatementList();
+            /*
+            MatchSequence(
+                StatementType.StatementList,
+                TokenType.EOF
+            ).Deconstruct(
+                out Node statements,
+                out Token _
+            );
+            return new StatementListNode
+            {
+                Left = statements,
+                Right = NoOpStatement
+            };
+        */
         }
 
         private Node Statement()
@@ -197,6 +308,10 @@ namespace MiniPL.Parse
                         _ => StatementType.Error
                     };
 
+                    if (statementType == StatementType.Error)
+                    {
+                        UnexpectedKeywordError(StatementFirstKeywords(DoBlock));
+                    }
                     MatchSequence(
                         statementType,
                         TokenType.Separator
@@ -228,12 +343,16 @@ namespace MiniPL.Parse
                 case TokenType.Keyword when DoBlock && InputTokenKeywordType == KeywordType.End:
                 case TokenType.EOF:
                     return NoOpStatement;
-                case TokenType.Keyword when StatementFirstKeywords.Includes(InputTokenKeywordType):
+                case TokenType.Keyword when StatementFirstKeywords(DoBlock).Includes(InputTokenKeywordType):
                 case TokenType.Identifier:
                     return (Node) Match(StatementType.StatementStatementList);
                 case TokenType.Keyword:
-                    UnexpectedKeywordError(StatementFirstKeywords);
+                    UnexpectedKeywordError(StatementFirstKeywords(DoBlock));
                     return NoOpStatement;
+                /*case TokenType.Separator:
+                    // I guess we're recovering from an error
+                    MatchTokenType(TokenType.Separator);
+                    return StatementList();*/
                 default:
                     UnexpectedTokenError(StatementFirstTokens);
                     return NoOpStatement;
@@ -354,7 +473,7 @@ namespace MiniPL.Parse
                 }
             };
         }
-        
+
         private Node ForStatement()
         {
             MatchSequence(
@@ -414,6 +533,9 @@ namespace MiniPL.Parse
                     Type = type
                 }
             };
+            
+            MatchTokenType(new TokenType[] {TokenType.Assignment, TokenType.Separator}, false);
+
             if (InputTokenType == TokenType.Separator)
             {
                 n.Expression = NoOpStatement;
@@ -432,21 +554,6 @@ namespace MiniPL.Parse
             return n;
         }
 
-        private PrimitiveType Type()
-        {
-            KeywordType[] expectedTypes =
-            {
-                KeywordType.Int,
-                KeywordType.String,
-                KeywordType.Bool
-            };
-
-            var tt = MatchKeywordType(expectedTypes);
-            if (tt != null) return tt.KeywordType.ToPrimitiveType();
-
-            return PrimitiveType.Void;
-        }
-
         private Node Expression()
         {
             switch (InputTokenType)
@@ -457,51 +564,52 @@ namespace MiniPL.Parse
                 case TokenType.Identifier:
                 case TokenType.OpenParen:
                 {
-                    var opnd1 = Operand();
+                    var operand1 = Operand();
 
-                    if (InputTokenType != TokenType.Operator) return opnd1;
+                    if (InputTokenType != TokenType.Operator) return operand1;
 
                     MatchSequence(
-                        TokenType.Operator,
+                        BinaryOperators,
                         StatementType.Operand
                     ).Deconstruct(
                         out Token op,
-                        out Node opnd2
+                        out Node operand2
                     );
 
                     return new ExpressionNode
                     {
-                        Token = opnd1.Token,
+                        Token = operand1.Token,
                         Expression = new BinaryNode
                         {
-                            Left = opnd1,
+                            Left = operand1,
                             Token = op,
-                            Right = opnd2
+                            Right = operand2
                         }
                     };
                 }
                 case TokenType.Operator:
                 {
                     MatchSequence(
-                        StatementType.UnaryOperator,
+                        UnaryOperators,
                         StatementType.Operand
                     ).Deconstruct(
                         out Token op,
-                        out Node opnd
+                        out Node operand
                     );
 
                     return new ExpressionNode
                     {
+                        Token = op, // hmm
                         Type = op.Content switch
                         {
                             "!" => PrimitiveType.Bool,
-                            _ => opnd.Type
+                            _ => operand.Type
                         },
                         Expression = new UnaryNode
                         {
                             Token = op,
-                            Type = opnd.Type,
-                            Value = opnd
+                            Type = operand.Type,
+                            Value = operand
                         }
                     };
                 }
@@ -539,99 +647,32 @@ namespace MiniPL.Parse
                     };
                 }
                 case TokenType.OpenParen:
-                    var (_, n, __) = (
+                    var (_, node, __) = (
                         MatchTokenType(TokenType.OpenParen),
                         Expression(),
                         MatchTokenType(TokenType.CloseParen)
                     );
-                    return n;
+                    return node;
                 case TokenType.Operator:
                     MatchSequence(
-                        StatementType.UnaryOperator,
+                        UnaryOperators,
                         StatementType.Operand
                     ).Deconstruct(
                         out Token op,
-                        out Node opnd
+                        out Node operand
                     );
                     return new UnaryNode
                     {
                         Token = op,
-                        Type = opnd.Type,
-                        Value = opnd
+                        Type = operand.Type,
+                        Value = operand
                     };
                 default:
                     UnexpectedTokenError(OperandFirstTokens);
                     break;
             }
 
-            return NoOpStatement; //Node.Of(NodeType.Unknown);
-        }
-
-        private Token UnaryOperator() // TODO: this was a bit wonky 
-        {
-            if (MatchContent(UnaryOperators))
-            {
-                return MatchTokenType(TokenType.Operator);
-            }
-
-            return _inputToken; // TODO: hmm
-        }
-
-        private Token MatchTokenType(TokenType tt)
-        {
-            var matchedToken = _inputToken;
-            if (InputTokenType == tt)
-            {
-                NextToken();
-                return matchedToken;
-            }
-
-            UnexpectedTokenError(tt);
-            return matchedToken;
-        }
-
-        private Token MatchKeywordType(KeywordType kwt)
-        {
-            var matchedToken = _inputToken;
-            if (InputTokenKeywordType == kwt)
-            {
-                NextToken();
-                return matchedToken;
-            }
-
-            UnexpectedKeywordError(kwt);
-            return matchedToken;
-        }
-
-        private Token MatchKeywordType(KeywordType[] kwtl)
-        {
-            var matchedToken = _inputToken;
-            if (kwtl.Any(kwt => InputTokenKeywordType == kwt))
-            {
-                NextToken();
-                return matchedToken;
-            }
-
-            UnexpectedKeywordError(kwtl);
-            return matchedToken;
-        }
-
-        private bool MatchContent(string s)
-        {
-            if (InputTokenContent.Equals(s)) return true;
-            ParseError(ErrorType.SyntaxError, _inputToken, $"expected {s}, got {InputTokenContent}");
-            return false;
-        }
-
-        private bool MatchContent(string[] sl)
-        {
-            if (sl.Any(InputTokenContent.Equals))
-            {
-                return true;
-            }
-
-            UnexpectedContentError(sl);
-            return false;
+            return NoOpStatement;
         }
     }
 }

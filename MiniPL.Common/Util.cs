@@ -6,7 +6,7 @@ namespace MiniPL.Common
 {
     public static class Util
     {
-        public static U TryGetValueOrDefault<T, U>(this Dictionary<T, U> dictionary, T key, U defaultValue = default(U))
+        public static TU TryGetValueOrDefault<T, TU>(this Dictionary<T, TU> dictionary, T key, TU defaultValue = default)
         {
             if (dictionary == null) throw new ArgumentNullException();
             if (key == null) throw new ArgumentNullException();
@@ -43,7 +43,7 @@ namespace MiniPL.Common
 
         public static PrimitiveType GuessType(string value)
         {
-            if (value == null) return PrimitiveType.Void;
+            if (value == null || value.Equals("")) return PrimitiveType.Void;
             if (value[0] == '-' && value.Substring(1).ToCharArray().All(char.IsDigit)) return PrimitiveType.Int;
             if (value.ToCharArray().All(char.IsDigit)) return PrimitiveType.Int;
             return PrimitiveType.String;

@@ -26,7 +26,8 @@ for i in 1..n do
     v := v * i;
 end for;
 print ""The result is: "";
-print v;";
+print v;
+assert(!(v < 0));";
 
     }
 }

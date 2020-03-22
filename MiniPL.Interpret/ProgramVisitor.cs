@@ -46,7 +46,9 @@ namespace MiniPL.Interpret
                     var input = Console.ReadLine();
                     var inputValues = input.Split(new[] {'\n', ' ', '\t', '\r'});
 
-                    if (inputValues.Length == 0 || inputValues.Length > 1)
+                    if (inputValues.Length == 0 || 
+                        inputValues[0].Equals("") || 
+                        inputValues.Length > 1)
                     {
                         ErrorService.Add(
                             ErrorType.InputError,
@@ -118,17 +120,6 @@ namespace MiniPL.Interpret
             return null;
         }
 
-        public Dictionary<string, OperatorType> OperatorToOperatorType = new Dictionary<string, OperatorType>()
-        {
-            ["*"] = OperatorType.Multiplication,
-            ["/"] = OperatorType.Division,
-            ["+"] = OperatorType.Addition,
-            ["-"] = OperatorType.Subtraction,
-            ["&"] = OperatorType.And,
-            ["="] = OperatorType.Equals,
-            ["<"] = OperatorType.LessThan,
-            ["!"] = OperatorType.Not
-        };
 
         public override object Visit(ExpressionNode node)
         {
@@ -137,37 +128,38 @@ namespace MiniPL.Interpret
 
         public override object Visit(BinaryNode node)
         {
-            var opnd1 = node.Left.Accept(this);
-            var opnd2 = node.Right.Accept(this);
-            var op = OperatorToOperatorType.TryGetValueOrDefault(node.Token.Content);
+            var operand1 = node.Left.Accept(this);
+            var operand2 = node.Right.Accept(this);
+            var op = node.Operator; //Token.OperatorToOperatorType.TryGetValueOrDefault(node.Token.Content);
 
             switch (op)
             {
-                case OperatorType.Addition when opnd1 is int o1 && opnd2 is int o2:
+                case OperatorType.Addition when operand1 is int o1 && operand2 is int o2:
                     return o1 + o2;
-                case OperatorType.Addition when opnd1 is string o1 && opnd2 is string o2:
+                case OperatorType.Addition when operand1 is string o1 && operand2 is string o2:
                     return o1 + o2;
-                case OperatorType.Subtraction when opnd1 is int o1 && opnd2 is int o2:
+                case OperatorType.Subtraction when operand1 is int o1 && operand2 is int o2:
                     return o1 - o2;
-                case OperatorType.Multiplication when opnd1 is int o1 && opnd2 is int o2:
+                case OperatorType.Multiplication when operand1 is int o1 && operand2 is int o2:
                     return o1 * o2;
-                case OperatorType.Division when opnd1 is int o1 && opnd2 is int o2:
+                case OperatorType.Division when operand1 is int o1 && operand2 is int o2:
                     return o1 / o2;
-                case OperatorType.And when opnd1 is bool o1 && opnd2 is bool o2:
+                case OperatorType.And when operand1 is bool o1 && operand2 is bool o2:
                     return o1 && o2;
-                case OperatorType.LessThan when opnd1 is int o1 && opnd2 is int o2:
+                case OperatorType.LessThan when operand1 is int o1 && operand2 is int o2:
                     return o1 < o2;
-                case OperatorType.LessThan when opnd1 is string o1 && opnd2 is string o2:
+                case OperatorType.LessThan when operand1 is string o1 && operand2 is string o2:
                     return string.CompareOrdinal(o1, o2) < 0;
-                case OperatorType.LessThan when opnd1 is bool o1 && opnd2 is bool o2:
+                case OperatorType.LessThan when operand1 is bool o1 && operand2 is bool o2:
                     return !o1 && o2;
                 case OperatorType.Equals:
-                    return opnd1.Equals(opnd2);
+                    return operand1.Equals(operand2);
                 default:
+                    // this should have been already caught in semantic analysis
                     ErrorService.Add(
                         ErrorType.InvalidOperation,
                         node.Token,
-                        $"invalid binary operation {node.Token.Content}" // TODO: operands?
+                        $"invalid binary operation {node.Token.Content}"
                     );
                     break;
             }
@@ -179,10 +171,10 @@ namespace MiniPL.Interpret
         {
             try
             {
-                return node.Token.Content switch
+                return node.Operator switch
                 {
-                    "-" => (object) -(int) node.Value.Accept(this),
-                    "!" => !(bool) node.Value.Accept(this),
+                    OperatorType.Subtraction => (object) -(int) node.Value.Accept(this),
+                    OperatorType.Not => !(bool) node.Value.Accept(this),
                     _ => throw new InvalidOperationException()
                 };
             }

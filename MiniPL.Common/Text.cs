@@ -31,7 +31,7 @@ namespace MiniPL.Common
         public bool IsExhausted => Pos >= End;
         public char Current => Pos < End ? text[Pos] : '\0';
         public char Peek => Pos + 1 < End ? text[Pos + 1] : '\0';
-        public string NextTwo => $"{Current}{Peek}";
+        private string NextTwo => $"{Current}{Peek}";
 
         public string Range(int start, int len)
         {

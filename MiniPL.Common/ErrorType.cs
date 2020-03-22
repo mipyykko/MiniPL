@@ -17,5 +17,6 @@ namespace MiniPL.Common
         InvalidOperation,
         UnterminatedStringTerminal,
         InputError
+        
     }
 }

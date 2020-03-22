@@ -118,16 +118,19 @@ namespace MiniPL.Tests
             mockNode.Verify(n => n.Accept(visitor), Times.Exactly(2));
         }
 
-        [TestCase(PrimitiveType.Int, PrimitiveType.Int)]
-        [TestCase(PrimitiveType.Int, PrimitiveType.String, true)]
-        [TestCase(PrimitiveType.Bool, PrimitiveType.Int, true)]
-        public void BinaryNodeTest(PrimitiveType type1, PrimitiveType type2, bool error = false)
+        [TestCase("+", PrimitiveType.Int, PrimitiveType.Int, PrimitiveType.Int)]
+        [TestCase("+", PrimitiveType.Int, PrimitiveType.String, PrimitiveType.Int, true)]
+        [TestCase("-", PrimitiveType.Bool, PrimitiveType.Int, PrimitiveType.Bool, true)]
+        [TestCase("=", PrimitiveType.Int, PrimitiveType.Int, PrimitiveType.Bool)]
+        [TestCase("&", PrimitiveType.Int, PrimitiveType.Int, PrimitiveType.Bool)]
+        [TestCase("<", PrimitiveType.Int, PrimitiveType.Int, PrimitiveType.Bool)]
+        public void BinaryNodeTest(string op, PrimitiveType type1, PrimitiveType type2, PrimitiveType expectedType, bool error = false)
         {
             var mockNode = new Mock<LiteralNode>();
             mockNode.SetupSequence(n => n.Accept(visitor))
                 .Returns(type1)
                 .Returns(type2);
-            var token = Token.Of(TokenType.Operator, KeywordType.Unknown, "+", MockSourceInfo);
+            var token = Token.Of(TokenType.Operator, KeywordType.Unknown, op, MockSourceInfo);
 
             var node = new BinaryNode
             {
@@ -137,37 +140,56 @@ namespace MiniPL.Tests
             };
             Assert.AreEqual(PrimitiveType.Void, node.Type);
 
-            visitor.Visit(node);
+            var ret = visitor.Visit(node);
 
             if (error)
             {
                 errorServiceMock.Verify(es => es.Add(
                     ErrorType.TypeError,
                     token,
-                    $"type error: can't perform operation + on {type1} and {type2}",
+                    $"type error: can't perform operation {op} on {type1} and {type2}",
                     false
-                ));
+                ), Times.Once);
             }
             mockNode.Verify(n => n.Accept(visitor), Times.Exactly(2));
             
-            Assert.AreEqual(type1, node.Type);
+            Assert.AreEqual(expectedType, node.Type);
         }
 
-        [Test]
-        public void UnaryNodeTest()
+        [TestCase("-", PrimitiveType.Int, PrimitiveType.Int)]
+        [TestCase("!", PrimitiveType.Bool, PrimitiveType.Bool)]
+        [TestCase("-", PrimitiveType.Bool, PrimitiveType.Bool, true)]
+        [TestCase("!", PrimitiveType.Int, PrimitiveType.Int, true)]
+        public void UnaryNodeTest(string op, PrimitiveType type, PrimitiveType expectedType, bool error = false)
         {
             var mockNode = new Mock<LiteralNode>();
-            mockNode.Setup(n => n.Accept(visitor)).Returns(PrimitiveType.Int);
+            mockNode.Setup(n => n.Accept(visitor)).Returns(type);
 
+            var token = Token.Of(
+                TokenType.Operator,
+                KeywordType.Unknown,
+                op,
+                MockSourceInfo
+            ); 
             var node = new UnaryNode
             {
+                Token = token,
                 Value = mockNode.Object
             };
 
             var ret = visitor.Visit(node);
-            
+
+            if (error)
+            {
+                errorServiceMock.Verify(es => es.Add(
+                    ErrorType.TypeError,
+                    token,
+                    $"type error: can't perform operation {op} on {type}",
+                    false
+                ), Times.Once);
+            }
             mockNode.Verify(n => n.Accept(visitor), Times.Once);
-            Assert.AreEqual(PrimitiveType.Int, ret);
+            Assert.AreEqual(expectedType, ret);
         }
 
         [TestCase("a", true, PrimitiveType.Int, PrimitiveType.Int, ErrorType.RedeclaredVariable)]

@@ -20,10 +20,9 @@ namespace MiniPL.Main
             var scanner = new Scanner();
             var parser = new Parser(scanner);
             var tree = parser.Program();
-            var symbolTableVisitor = new SemanticAnalysisVisitor();
-            tree.Accept(symbolTableVisitor);
+            var semanticAnalysisVisitor = new SemanticAnalysisVisitor();
+            tree.Accept(semanticAnalysisVisitor);
             
-            tree.AST();
             new Interpreter(tree);
             
             Context.ErrorService.Throw();

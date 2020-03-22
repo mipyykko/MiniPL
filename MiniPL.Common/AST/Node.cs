@@ -28,12 +28,19 @@ namespace MiniPL.Common.AST
         public virtual string Representation() => $"{Token.Content}";
     }
 
-    public class BinaryNode : Node
+    public abstract class OpNode : Node
+    {
+        public abstract OperatorType Operator { get; set; }
+    }
+    
+    public class BinaryNode : OpNode
     {
         public override string Name => "BinaryOp";
 
         public Node Left;
         public Node Right;
+
+        public override OperatorType Operator { get; set; }
 
         public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; }
@@ -72,12 +79,14 @@ namespace MiniPL.Common.AST
         public override string Representation() => Expression.Representation();
     }
 
-    public class UnaryNode : Node
+    public class UnaryNode : OpNode
     {
         public override string Name => "UnaryOp";
 
         public new Node Value;
 
+        public override OperatorType Operator { get; set; }
+        
         public override Token Token { get; set; }
         public override PrimitiveType Type { get; set; }
 
@@ -85,14 +94,16 @@ namespace MiniPL.Common.AST
 
         public override void AST(int depth = 0)
         {
-            Console.Write($"{Name} {Token.Content}");
+            Console.WriteLine($"{Name} {Token.Content}");
             Value.AST(depth + 1);
+            Console.WriteLine($"{Spaces(depth * 2)}]");
         }
 
         public override string Representation()
         {
             return $"{Token.Content}{Value.Representation()}";
         }
+
     }
 
 

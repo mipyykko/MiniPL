@@ -280,6 +280,7 @@ namespace MiniPL.Tests
             var node = new BinaryNode
             {
                 Token = nodeToken,
+                Operator = Token.OperatorToOperatorType[op],
                 Left = leftNodeMock.Object,
                 Right = rightNodeMock.Object,
             };
@@ -322,6 +323,7 @@ namespace MiniPL.Tests
             var node = new UnaryNode
             {
                 Token = nodeToken,
+                Operator = Token.OperatorToOperatorType[op],
                 Value = nodeMock.Object
             };
 

@@ -10,7 +10,7 @@ namespace MiniPL.Interpret
         private readonly Dictionary<string, object> _memory = new Dictionary<string, object>();
         private ISymbolTable SymbolTable => Context.SymbolTable;
         
-        public ErrorType UpdateVariable(string id, dynamic value = null, bool control = false)
+        public ErrorType UpdateVariable(string id, dynamic value, bool control = false)
         {
             if (!control && SymbolTable.IsControlVariable(id))
             {
@@ -31,10 +31,6 @@ namespace MiniPL.Interpret
 
         public ErrorType UpdateControlVariable(string id, object value)
         {
-            // if (!_symbolTable.IsControlVariable(id) || !_symbolTable.SymbolExists(id))
-            // {
-            //     return ErrorType.AssignmentToControlVariable; // TODO
-            // }
             return UpdateVariable(id, value, true);
         }
 

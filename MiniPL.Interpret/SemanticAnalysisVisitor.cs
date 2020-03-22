@@ -5,7 +5,6 @@ using MiniPL.Common.AST;
 using MiniPL.Common.Errors;
 using MiniPL.Common.Symbols;
 using MiniPL.Interpret;
-using static MiniPL.Common.Util;
 
 namespace MiniPL.Interpret
 {
@@ -13,6 +12,14 @@ namespace MiniPL.Interpret
     {
         private ISymbolTable SymbolTable => Context.SymbolTable;
         private IErrorService ErrorService => Context.ErrorService;
+
+        private static readonly OperatorType[] BooleanOperators = new[]
+        {
+            OperatorType.And,
+            OperatorType.Equals,
+            OperatorType.Not,
+            OperatorType.LessThan
+        };
 
         public override object Visit(StatementNode node)
         {
@@ -90,6 +97,8 @@ namespace MiniPL.Interpret
             var type1 = (PrimitiveType) node.Left.Accept(this);
             var type2 = (PrimitiveType) node.Right.Accept(this);
 
+            var op = Token.OperatorToOperatorType.TryGetValueOrDefault(node.Token.Content);
+
             if (type1 != type2)
             {
                 ErrorService.Add(
@@ -99,13 +108,31 @@ namespace MiniPL.Interpret
                 );
             }
 
-            node.Type = type1;
-            return type1;
+            var type = BooleanOperators.Includes(op) ? PrimitiveType.Bool : type1;
+            
+            node.Operator = op;
+            node.Type = type;
+            return type;
         }
 
         public override object Visit(UnaryNode node)
         {
-            return (PrimitiveType) node.Value.Accept(this);
+            var op = Token.OperatorToOperatorType.TryGetValueOrDefault(node.Token.Content);
+            var type = (PrimitiveType) node.Value.Accept(this);
+            
+            node.Operator = op;
+
+            if ((op == OperatorType.Not && type != PrimitiveType.Bool) ||
+                (op == OperatorType.Subtraction && type != PrimitiveType.Int))
+            {
+                ErrorService.Add(
+                    ErrorType.TypeError, 
+                    node.Token,
+                    $"type error: can't perform operation {node.Token.Content} on {type}"
+                );
+            }
+            node.Type = op == OperatorType.Not ? PrimitiveType.Bool : type;
+            return type;
         }
 
         public override object Visit(AssignmentNode node)
@@ -152,7 +179,7 @@ namespace MiniPL.Interpret
                     ErrorService.Add(
                         ErrorType.TypeError, 
                         node.Id.Token,
-                        $"type error: attempting to assign {node.Expression.Type} {node.Expression.Token.Content} to variable {id} of type {node.Id.Type}"
+                        $"type error: attempting to assign {node.Expression.Type} to variable {id} of type {node.Id.Type}"
                     );
                 }
             }

@@ -28,31 +28,26 @@ namespace MiniPL.Tests
             var scanner = new Scanner();
             var parser = new Parser(scanner);
 
-            var tree = parser.Program();
-            var left = ((StatementListNode) tree).Left;
+            var tree = (StatementListNode) parser.Program();
+            var left = tree.Left;
             Console.Write($"{program} {left.Name}");
-            var leftleft = ((StatementListNode) left).Left;
 
             Assert.AreEqual(
                 "StatementList",
                 tree.Name
             );
-            Assert.AreEqual(
-                "StatementList",
-                left.Name
-            );
 
             Assert.AreEqual(
                 nodeType,
-                leftleft.Name
+                left.Name
             );
             Assert.AreEqual(
                 tokenType,
-                leftleft.Token.Type
+                left.Token.Type
             );
             Assert.AreEqual(
                 keywordType,
-                leftleft.Token.KeywordType
+                left.Token.KeywordType
             );
         }
 
